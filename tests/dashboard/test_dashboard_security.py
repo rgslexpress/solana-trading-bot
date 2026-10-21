@@ -251,3 +251,22 @@ def test_second_server_on_same_port_and_second_panel_instance_are_refused():
             a.release()
         finally:
             p.close()
+
+
+def test_rejections_are_delivered_even_when_the_client_sends_a_body_that_the_server_does_not_use():
+    """Regressão (Windows, WinError 10053): recusar sem ler o corpo derrubava a conexão antes do cliente ler o 403/413/405."""
+    with tempfile.TemporaryDirectory() as d:
+        p = Panel(d)
+        try:
+            big = b"x" * 3000
+            for _ in range(5):  # repete: o defeito dependia de timing
+                assert p.req("POST", "/api/bot/stop", headers={"Host": "evil.example"}, raw=big)[0] == 403
+                assert p.req("POST", "/api/bot/stop", token=False, raw=big)[0] == 403
+                assert p.req("POST", "/api/bot/stop", headers={"Origin": "http://evil.example"}, raw=big)[0] == 403
+                assert p.req("POST", "/api/bot/unknown", raw=big)[0] == 404
+                assert p.req("POST", "/api/bot/stop", raw=b"x" * 5000)[0] == 413
+                assert p.req("POST", "/api/bot/stop", raw=b"x" * 200_000)[0] == 413
+                assert p.req("PUT", "/api/bot/stop", raw=big)[0] == 405
+            assert p.req("POST", "/api/bot/pause-entries")[0] == 200  # o servidor continua saudável
+        finally:
+            p.close()

@@ -170,12 +170,32 @@ class PanelHandler(BaseHTTPRequestHandler):
                 return readmodel.logs_view(conn, c.s.log_file, limit)
         return {}
 
+    def _drain_body(self) -> tuple[int, bytes]:
+        """Lê SEMPRE o corpo enviado pelo cliente antes de responder. No Windows, responder/fechar a conexão com dados
+        não lidos causa RST (WinError 10053) e o cliente não recebe a resposta. Retorna (tamanho_declarado, corpo<=MAX_BODY)."""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return -1, b""
+        if length <= 0:
+            return length, b""
+        keep = self.rfile.read(min(length, MAX_BODY))
+        remaining = min(length, 1_048_576) - len(keep)  # descarta (sem guardar) até 1 MB; acima disso apenas fecha
+        while remaining > 0:
+            chunk = self.rfile.read(min(65536, remaining))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+        return length, keep
+
     def _reject_method(self) -> None:
+        self._drain_body()
         self._json(405, {"erro": "método não permitido"}, {"Allow": "GET, POST"})
 
     do_PUT = do_DELETE = do_PATCH = do_OPTIONS = do_HEAD = _reject_method  # noqa: N815 (sem CORS: OPTIONS recusado)
 
     def do_POST(self) -> None:  # noqa: N802
+        length, raw = self._drain_body()  # antes de QUALQUER resposta (ver _drain_body)
         if not self._host_ok():
             return self._error(403, "Host não permitido")
         path = self.path.split("?")[0]
@@ -192,13 +212,10 @@ class PanelHandler(BaseHTTPRequestHandler):
         token = self.headers.get("X-CSRF-Token") or ""
         if not hmac.compare_digest(token.encode(), self.server.csrf_token.encode()):
             return self._error(403, "token CSRF inválido")
-        try:
-            length = int(self.headers.get("Content-Length") or 0)
-        except ValueError:
+        if length < 0:
             return self._error(400, "Content-Length inválido")
-        if length < 0 or length > MAX_BODY:
+        if length > MAX_BODY:
             return self._error(413, "corpo grande demais")
-        raw = self.rfile.read(length) if length else b""
         try:
             body = json.loads(raw.decode("utf-8")) if raw else {}
         except (ValueError, UnicodeDecodeError):

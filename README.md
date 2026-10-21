@@ -21,6 +21,8 @@ Com dados reais: exporte candles para `data/<SIMBOLO>_<tf>.csv` (`timestamp,open
 
 > **Transferindo para outro computador?** Veja `docs/INSTALACAO_WINDOWS.md` (publicação em repositório privado, instalação passo a passo, checklist e o que depende de internet).
 
+> **Simulação com dados reais (sem dinheiro real):** backtest histórico e paper em tempo real — veja `docs/SIMULACAO_REAL.md`.
+
 ## Painel local no Windows (somente PAPER, somente 127.0.0.1)
 
 Arquitetura: o robô roda **no seu computador**; o painel é um servidor HTTP local (biblioteca padrão do Python, sem dependências novas) que escuta **apenas em `127.0.0.1`**. Sem Vercel, VPS, túnel ou acesso remoto. O painel **só executa paper trading**: não existe botão, endpoint ou configuração que habilite LIVE, assine ou envie transações, e nenhuma chave/carteira é necessária.
