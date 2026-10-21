@@ -188,7 +188,7 @@ class Settings:
         path = Path(self.tokens_file)
         if not path.exists():
             raise ConfigError(f"arquivo de tokens não encontrado: {path}")
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = json.loads(path.read_text(encoding="utf-8-sig"))
         quote_raw = raw.get("quote")
         if not quote_raw:
             raise ConfigError("tokens.json precisa de uma chave 'quote'")
@@ -230,7 +230,7 @@ def _parse_dotenv(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     if not path.exists():
         return out
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8-sig").splitlines():  # utf-8-sig: tolera BOM do Bloco de Notas
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

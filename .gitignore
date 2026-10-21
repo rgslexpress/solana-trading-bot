@@ -31,3 +31,18 @@ venv/
 *.egg-info/
 build/
 dist/
+
+# Adicionado na preparação da transferência
+*.log
+*.db
+*.robo.lock
+*.painel.lock
+*.painel.json
+data/*.csv
+node_modules/
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*.bak
+*.tmp

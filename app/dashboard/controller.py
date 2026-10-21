@@ -247,6 +247,14 @@ class BotController:
             self._event("painel_encerrado_com_posicoes", f"{n_open} posição(ões) simulada(s) aberta(s) sem monitoramento", "painel")
         return res
 
+    def close(self) -> None:
+        """Fecha a conexão de controle (chamar depois de `shutdown`). Importante no Windows: arquivo SQLite aberto não pode ser movido/apagado."""
+        with self._db_lock:
+            try:
+                self.db.close()
+            except Exception:  # noqa: BLE001
+                pass
+
     # ------------------------------------------------------------------ leitura
     def status(self) -> dict[str, Any]:
         now = self.clock()

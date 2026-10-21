@@ -8,7 +8,7 @@ Robô modular em Python para **testar hipóteses de trading** com preservação 
 
 ```bash
 python -m venv .venv && source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt   # runtime = requirements.txt; LIVE (bloqueado) = requirements-live.txt
 cp .env.example .env
 cp config/tokens.example.json config/tokens.json            # revise os mints!
 python scripts/check_environment.py
@@ -18,6 +18,8 @@ python scripts/run_paper_trading.py --replay-days 20        # paper em replay of
 ```
 
 Com dados reais: exporte candles para `data/<SIMBOLO>_<tf>.csv` (`timestamp,open,high,low,close,volume`, timestamp em segundos UTC), defina `BOT_DATA_SOURCE=csv` e `BOT_DATA_LIQUIDITY_USD_OVERRIDE=<liquidez em USD da pool>` (0 = desconhecida ⇒ o robô **não opera**). Ou use `geckoterminal` (não verificado, ver limitações) com `pool` no `tokens.json`.
+
+> **Transferindo para outro computador?** Veja `docs/INSTALACAO_WINDOWS.md` (publicação em repositório privado, instalação passo a passo, checklist e o que depende de internet).
 
 ## Painel local no Windows (somente PAPER, somente 127.0.0.1)
 

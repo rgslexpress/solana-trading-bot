@@ -1,0 +1,15 @@
+# Normaliza fins de linha entre Windows e Linux.
+* text=auto
+# Scripts do Windows PRECISAM de CRLF (labels/goto podem falhar com LF puro).
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# Arquivos usados em Linux/Docker mantêm LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+# Binários
+*.png binary
+*.ico binary

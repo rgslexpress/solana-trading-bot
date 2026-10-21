@@ -152,6 +152,8 @@ def test_signer_hides_secret_and_checks_wallet_match():
 
 
 def test_signer_from_file_requires_strict_permissions():
+    if os.name != "posix":  # a verificação de permissões 0600 só existe em POSIX; no Windows use ACLs/pasta do usuário
+        return
     signer, secret = _new_signer()
     with tempfile.TemporaryDirectory() as d:
         p = os.path.join(d, "key.json")

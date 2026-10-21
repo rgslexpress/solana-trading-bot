@@ -142,8 +142,9 @@ def test_env_example_and_gitignore_are_safe():
     import re
 
     pat = re.compile(r"\b[1-9A-HJ-NP-Za-km-z]{85,90}\b")
+    skip = {".git", "reports", ".venv", "venv", "__pycache__", "site-packages", "node_modules", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
     for p in list(ROOT.rglob("*.py")) + list(ROOT.rglob("*.md")) + list(ROOT.rglob("*.json")) + [ROOT / ".env.example"]:
-        if ".git" in p.parts or "reports" in p.parts:
+        if skip & set(p.relative_to(ROOT).parts):  # nunca varrer o ambiente virtual nem caches
             continue
         assert not pat.search(p.read_text(encoding="utf-8", errors="ignore")), f"possível chave em {p}"
 

@@ -7,12 +7,13 @@ readme = "README.md"
 dependencies = [
   "pandas==2.3.3",
   "numpy==2.2.6",
-  "cryptography==50.0.1",
   "httpx==0.28.1",
 ]
 
 [project.optional-dependencies]
+live = ["cryptography==50.0.1"]  # somente caminho LIVE (bloqueado); também usada nos testes do assinador
 dev = [
+  "cryptography==50.0.1",
   "pytest==8.3.5",
   "ruff==0.11.13",
   "mypy==1.16.0",

@@ -100,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         res = controller.shutdown()
         if res.get("aviso"):
             print("AVISO:", res["aviso"])
+        controller.close()
         server.server_close()
         try:
             rf.unlink()

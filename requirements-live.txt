@@ -1,0 +1,4 @@
+# Dependência SOMENTE do caminho LIVE (assinatura Ed25519 local em app/execution/signer.py).
+# LIVE está BLOQUEADO nesta fase: NÃO instale para operar paper trading/painel.
+# Também é usada por 3 arquivos de teste (assinador/executor Jupiter) — por isso consta em requirements-dev.txt.
+cryptography==50.0.1

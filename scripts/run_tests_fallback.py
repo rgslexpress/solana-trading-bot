@@ -12,6 +12,8 @@ import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tests"))
+import conftest  # noqa: E402,F401  (aplica a tolerância de limpeza de diretórios temporários, como no pytest)
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 sys.path.insert(0, str(ROOT / "tests" / "dashboard"))

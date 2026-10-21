@@ -1,5 +1,10 @@
+# Desenvolvimento e testes (inclui o runtime).
 -r requirements.txt
+# Testes do assinador/executor Jupiter (simulados) importam `cryptography`; não habilita LIVE.
+-r requirements-live.txt
 pytest==8.3.5
+# Opcional: tabelas markdown nos relatórios de backtest (há alternativa sem tabulate).
+tabulate==0.9.0
+# Qualidade estática (opcionais para rodar o robô):
 ruff==0.11.13
 mypy==1.16.0
-tabulate==0.9.0

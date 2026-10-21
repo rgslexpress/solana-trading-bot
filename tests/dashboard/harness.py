@@ -110,3 +110,4 @@ class Panel:
             self.server.shutdown()
             self.server.server_close()
             self.thread.join(5)
+            self.ctl.close()
