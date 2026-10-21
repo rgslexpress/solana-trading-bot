@@ -1,3 +1,4 @@
+[hidden] { display: none !important; } /* garante que o atributo hidden prevaleça sobre display:flex/grid */
 :root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f24; --mut:#5b6672; --line:#dfe3e8; --ok:#0a7a3d; --warn:#9a6700; --bad:#b42318; --acc:#0b5cab; }
 * { box-sizing: border-box; }
 body { margin:0; padding:16px 20px 40px; font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); }

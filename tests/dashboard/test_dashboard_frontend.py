@@ -49,3 +49,12 @@ def test_frontend_source_has_no_dynamic_html_eval_storage_or_credentials():
     html = (APP / "index.html").read_text(encoding="utf-8")
     assert "<script>" not in html and "onclick" not in html and "style=" not in html
     assert "http://" not in html and "https://" not in html  # nenhum recurso externo (CDN, fontes, analytics)
+
+
+def test_css_makes_hidden_attribute_win_over_display_rules():
+    """Regressão: .ks-resume { display:flex } deixava a caixa de retomada do kill switch visível mesmo com `hidden`."""
+    css = (APP / "app.css").read_text(encoding="utf-8")
+    assert "[hidden] { display: none !important; }" in css
+    html = (APP / "index.html").read_text(encoding="utf-8")
+    for elem_id in ("kill-banner", "ks-resume"):
+        assert f'id="{elem_id}"' in html and "hidden" in html.split(f'id="{elem_id}"')[1].split(">")[0]
