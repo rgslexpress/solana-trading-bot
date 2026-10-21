@@ -1,0 +1,7 @@
+# Dependências de runtime (versões fixadas).
+# pandas/numpy/cryptography foram instalados e exercitados no ambiente de desenvolvimento (Python 3.10).
+# httpx NÃO pôde ser instalado/testado lá (sem acesso ao PyPI): confirme com `pip install -r requirements.txt && pip check`.
+pandas==2.3.3
+numpy==2.2.6
+cryptography==50.0.1
+httpx==0.28.1

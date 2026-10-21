@@ -1,0 +1,40 @@
+services:
+  bot:
+    build: .
+    image: solana-trading-bot:1.0.0
+    # Padrão: PAPER. Para LIVE (somente após todo o checklist do README) troque o command por:
+    #   ["--mode", "live", "--confirm-live", "EU_ENTENDO_QUE_ISTO_USA_FUNDOS_REAIS"]
+    command: ["--mode", "paper"]
+    env_file: .env
+    environment:
+      BOT_DB_PATH: /app/data/bot.sqlite3
+      BOT_REPORTS_DIR: /app/reports
+      BOT_LOG_FILE: /app/logs/bot.log
+      BOT_TOKENS_FILE: /app/config/tokens.json
+      # Chave privada: monte um ARQUIVO como secret (nunca variável de ambiente, nunca na imagem)
+      # BOT_WALLET_SECRET_FILE: /run/secrets/wallet_key
+    volumes:
+      - bot_data:/app/data
+      - bot_reports:/app/reports
+      - bot_logs:/app/logs
+      - ./config/tokens.json:/app/config/tokens.json:ro
+    # secrets:
+    #   - wallet_key
+    restart: "no"          # após falha crítica NÃO reinicia sozinho em loop; investigue primeiro
+    stop_grace_period: 30s # encerramento organizado (SIGTERM)
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    cpus: 1.0
+    # nenhuma porta publicada
+
+volumes:
+  bot_data:
+  bot_reports:
+  bot_logs:
+
+# secrets:
+#   wallet_key:
+#     file: ./secrets/wallet_key.json   # chmod 600; fora do Git (ver .gitignore)

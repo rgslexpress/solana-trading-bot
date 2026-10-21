@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="__CSRF__">
+  <meta name="referrer" content="no-referrer">
+  <title>Painel do Robô — PAPER TRADING (simulado)</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header>
+    <h1>Painel do Robô de Trading</h1>
+    <div class="badges">
+      <span class="badge paper">PAPER TRADING — SIMULADO</span>
+      <span class="badge live">LIVE BLOQUEADO</span>
+      <span class="badge" id="estado">Estado: …</span>
+    </div>
+  </header>
+
+  <div id="kill-banner" class="banner danger" hidden></div>
+  <p class="notice" id="live-motivo"></p>
+  <ul id="avisos" class="alerts"></ul>
+
+  <section>
+    <h2>Controles</h2>
+    <div class="controls">
+      <button id="btn-iniciar" data-acao="iniciar" type="button">Iniciar paper trading</button>
+      <button id="btn-pausar" data-acao="pausar_entradas" type="button">Pausar novas entradas</button>
+      <button id="btn-retomar" data-acao="retomar_entradas" type="button">Retomar entradas</button>
+      <button id="btn-parar" data-acao="parar" type="button">Parar paper trading</button>
+      <button id="btn-emergencia" class="danger" data-acao="emergencia" type="button">EMERGÊNCIA (parada segura)</button>
+    </div>
+    <div id="ks-resume" class="ks-resume" hidden>
+      <strong>Retomar kill switch</strong> (o robô precisa estar parado). Digite a frase <code>RETOMAR_OPERACAO</code> e a causa corrigida:
+      <input id="ks-frase" type="text" autocomplete="off" placeholder="frase de confirmação" maxlength="100">
+      <input id="ks-nota" type="text" autocomplete="off" placeholder="justificativa" maxlength="300">
+      <button id="btn-ks" data-acao="retomar_kill_switch" type="button">Retomar kill switch</button>
+    </div>
+    <p id="msg" class="msg" role="status"></p>
+    <p class="small">Parar o paper trading <b>não envia ordens e não liquida nada</b>: o estado fica salvo. Enquanto parado, stops simulados <b>não</b> são monitorados.
+      A emergência aciona o kill switch existente (bloqueia novas entradas, preserva posições).</p>
+  </section>
+
+  <section>
+    <h2>Desempenho (valores simulados) <span class="small" id="rotulo-metricas"></span></h2>
+    <div class="cards" id="cards"></div>
+    <svg id="curva" viewBox="0 0 600 120" preserveAspectRatio="none" aria-label="Curva de patrimônio simulado"></svg>
+    <p class="small" id="curva-legenda"></p>
+  </section>
+
+  <section>
+    <h2>Fontes de dados e cotações</h2>
+    <table id="tb-dados"><thead><tr><th>Token</th><th>Fonte</th><th>Situação</th><th>Idade do último candle fechado</th><th>Última verificação</th><th>Último preço</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>Posições abertas (simuladas)</h2>
+    <table id="tb-abertas"><thead><tr><th>Token</th><th>Quantidade</th><th>Entrada</th><th>Preço atual</th><th>Stop</th><th>Alvo</th><th>P/L não realizado</th><th>Aberta em</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>Operações encerradas (simuladas)</h2>
+    <table id="tb-encerradas"><thead><tr><th>Token</th><th>Quantidade</th><th>Entrada</th><th>Saída</th><th>Motivo</th><th>P/L líquido</th><th>Custos</th><th>Encerrada em</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>Histórico de decisões</h2>
+    <table id="tb-decisoes"><thead><tr><th>Quando</th><th>Token</th><th>Decisão</th><th>Pontos</th><th>Motivos</th><th>Rejeições / por que não operou</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section>
+    <h2>Eventos, alertas e logs</h2>
+    <h3>Mudanças de estado do robô</h3>
+    <table id="tb-eventos"><thead><tr><th>Quando</th><th>Evento</th><th>Origem</th><th>Detalhe</th></tr></thead><tbody></tbody></table>
+    <h3>Alertas</h3>
+    <table id="tb-alertas"><thead><tr><th>Quando</th><th>Nível</th><th>Mensagem</th></tr></thead><tbody></tbody></table>
+    <h3>Erros recentes no arquivo de log</h3>
+    <table id="tb-erros"><thead><tr><th>Quando</th><th>Nível</th><th>Origem</th><th>Mensagem</th></tr></thead><tbody></tbody></table>
+    <p class="small" id="log-info"></p>
+  </section>
+
+  <section>
+    <h2>Configurações e limites atuais (somente leitura)</h2>
+    <div class="cfg" id="cfg"></div>
+    <p class="small">Para alterar limites, edite o arquivo <code>.env</code> e reinicie o painel. A interface não altera configurações nem modo de execução.</p>
+  </section>
+
+  <footer class="small">
+    Todos os números são <b>simulados</b> (paper trading). Esta tela não valida que o robô é lucrativo nem autoriza operar com dinheiro real.
+    Atualizado em <span id="atualizado">—</span>.
+  </footer>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

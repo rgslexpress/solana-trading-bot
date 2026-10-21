@@ -1,0 +1,215 @@
+# Relatório dos testes (atualizado: etapa do painel local)
+
+Executado em 2026-10-21, Python 3.10.12 (Linux), Node v22.23.2, pandas 2.3.3, numpy 2.2.6, cryptography 50.0.1.
+Comando: `python scripts/run_tests_fallback.py` (runner de contingência; `pytest` não pôde ser instalado — sem acesso ao PyPI).
+
+**Resultado: 172 executados, 172 passaram, 0 falharam.** Os 29 testes do painel foram repetidos 3 vezes adicionais sem falhas (sem flutuação observada).
+
+## O que é REAL e o que é MOCK/determinístico
+- **Real (neste ambiente):** servidor HTTP do painel em loopback com sockets reais; controlador e *threads* reais; SQLite real em disco; travas de instância do SO; processo `python -m app.dashboard` iniciado, inspecionado (`ss -ltn`, `curl`) e encerrado com `--parar`.
+- **Mock / determinístico:** provedor de candles e relógio dos testes (`ArrayProvider`), Jupiter/RPC/GeckoTerminal simulados (`FakeNet`), falhas injetadas em `run_cycle`. **Não validam APIs externas.**
+- **Fumaça do frontend:** `app.js` executado em Node com um DOM mínimo escrito à mão contra o servidor real. **Não é um navegador.**
+
+## Não executados / não executáveis neste ambiente
+- Qualquer navegador real (Chrome/Edge/Firefox/Playwright): layout, `confirm()`, responsividade **não verificados**.
+- **Windows**: `msvcrt.locking`, `SO_EXCLUSIVEADDRUSE`, URI SQLite `file:///C:/...`, scripts `.bat`, `webbrowser.open` — não executados.
+- `pytest` real, `ruff`, `mypy`; Docker; Python 3.12; `httpx`; instalação em ambiente limpo.
+- Qualquer chamada real à Jupiter, Solana RPC, GeckoTerminal ou Telegram.
+
+## Testes por arquivo
+- `tests/backtest/test_backtest.py`: 8
+- `tests/backtest/test_backtest_audit.py`: 6
+- `tests/dashboard/test_dashboard_frontend.py`: 2
+- `tests/dashboard/test_dashboard_lifecycle.py`: 13
+- `tests/dashboard/test_dashboard_security.py`: 14
+- `tests/integration/test_jupiter_executor.py`: 18
+- `tests/integration/test_live_build_no_orders.py`: 2
+- `tests/integration/test_paper_service.py`: 7
+- `tests/integration/test_risk_recovery_paths.py`: 8
+- `tests/security/test_live_disabled_and_paper_isolation.py`: 12
+- `tests/security/test_logging_redaction.py`: 4
+- `tests/security/test_malicious_transactions.py`: 11
+- `tests/security/test_token_authorities.py`: 6
+- `tests/security/test_tx_validation_and_signer.py`: 14
+- `tests/unit/test_config.py`: 5
+- `tests/unit/test_data_validation.py`: 9
+- `tests/unit/test_indicators.py`: 9
+- `tests/unit/test_providers.py`: 3
+- `tests/unit/test_resilience_alerts.py`: 4
+- `tests/unit/test_risk.py`: 9
+- `tests/unit/test_strategy.py`: 8
+
+## Lista completa
+
+- tests/backtest/test_backtest.py::test_backtest_runs_and_is_deterministic
+- tests/backtest/test_backtest.py::test_costs_reduce_result_and_fees_reported
+- tests/backtest/test_backtest.py::test_drawdown_limit_halts_new_entries
+- tests/backtest/test_backtest.py::test_equity_accounting_matches_trade_ledger
+- tests/backtest/test_backtest.py::test_future_data_does_not_change_past_trades
+- tests/backtest/test_backtest.py::test_period_split_is_chronological_and_disjoint
+- tests/backtest/test_backtest.py::test_signal_on_close_executes_next_open_not_same_bar
+- tests/backtest/test_backtest.py::test_stop_loss_exit_bounds_loss_near_planned_risk
+- tests/backtest/test_backtest_audit.py::test_entry_happens_at_open_after_signal_bar_never_at_signal_close
+- tests/backtest/test_backtest_audit.py::test_execution_failures_degrade_or_change_results_and_are_reported
+- tests/backtest/test_backtest_audit.py::test_gap_through_stop_fills_at_open_not_at_stop
+- tests/backtest/test_backtest_audit.py::test_metrics_match_hand_computation
+- tests/backtest/test_backtest_audit.py::test_sharpe_is_none_without_enough_points_and_profit_factor_none_without_losses
+- tests/backtest/test_backtest_audit.py::test_stop_without_gap_fills_at_stop_and_loss_matches_planned_risk
+- tests/dashboard/test_dashboard_frontend.py::test_frontend_renders_nd_and_paper_labels_and_clicks_hit_the_real_backend
+- tests/dashboard/test_dashboard_frontend.py::test_frontend_source_has_no_dynamic_html_eval_storage_or_credentials
+- tests/dashboard/test_dashboard_lifecycle.py::test_cli_stop_command_uses_runtime_file_over_loopback_only
+- tests/dashboard/test_dashboard_lifecycle.py::test_cycle_errors_do_not_kill_the_loop_pause_entries_and_recover
+- tests/dashboard/test_dashboard_lifecycle.py::test_emergency_triggers_existing_kill_switch_blocks_entries_but_keeps_monitoring_and_never_liquidates
+- tests/dashboard/test_dashboard_lifecycle.py::test_emergency_while_stopped_persists_and_next_start_is_safe_mode
+- tests/dashboard/test_dashboard_lifecycle.py::test_empty_database_shows_nd_not_invented_numbers
+- tests/dashboard/test_dashboard_lifecycle.py::test_logs_errors_and_bot_events_are_available_in_the_panel
+- tests/dashboard/test_dashboard_lifecycle.py::test_missing_invalid_and_stale_data_are_reported_and_block_entries
+- tests/dashboard/test_dashboard_lifecycle.py::test_only_one_trading_loop_per_database_between_panel_and_cli
+- tests/dashboard/test_dashboard_lifecycle.py::test_opening_the_panel_does_not_start_anything
+- tests/dashboard/test_dashboard_lifecycle.py::test_panel_shutdown_stops_loop_orderly_warns_about_open_positions_and_never_sends_orders
+- tests/dashboard/test_dashboard_lifecycle.py::test_paper_trade_through_panel_persists_across_panel_restart_and_reconciles
+- tests/dashboard/test_dashboard_lifecycle.py::test_paused_entries_block_buys_and_resume_allows_them_decisions_are_recorded
+- tests/dashboard/test_dashboard_lifecycle.py::test_start_pause_resume_stop_call_the_real_backend
+- tests/dashboard/test_dashboard_security.py::test_config_endpoint_is_a_whitelist_without_secrets_wallet_or_rpc
+- tests/dashboard/test_dashboard_security.py::test_cross_origin_page_cannot_control_the_bot_even_if_it_guesses_the_endpoint
+- tests/dashboard/test_dashboard_security.py::test_dashboard_package_has_no_path_to_wallets_signing_jupiter_or_network
+- tests/dashboard/test_dashboard_security.py::test_full_start_stop_cycle_never_touches_signer_or_live_builder
+- tests/dashboard/test_dashboard_security.py::test_host_header_must_be_loopback_blocks_dns_rebinding
+- tests/dashboard/test_dashboard_security.py::test_index_has_csrf_token_csp_and_no_cors_headers_and_no_inline_script
+- tests/dashboard/test_dashboard_security.py::test_logs_endpoint_redacts_secrets
+- tests/dashboard/test_dashboard_security.py::test_methods_other_than_get_post_are_rejected_without_cors
+- tests/dashboard/test_dashboard_security.py::test_path_traversal_and_unknown_routes_are_404
+- tests/dashboard/test_dashboard_security.py::test_post_requires_csrf_origin_content_type_size_and_valid_json
+- tests/dashboard/test_dashboard_security.py::test_route_table_exposes_nothing_about_live_wallets_signing_or_config_writes
+- tests/dashboard/test_dashboard_security.py::test_second_server_on_same_port_and_second_panel_instance_are_refused
+- tests/dashboard/test_dashboard_security.py::test_server_refuses_non_loopback_hosts_and_binds_127_0_0_1
+- tests/dashboard/test_dashboard_security.py::test_strict_schema_no_endpoint_accepts_mode_keys_or_config
+- tests/integration/test_jupiter_executor.py::test_auth_error_is_not_retried_but_5xx_is
+- tests/integration/test_jupiter_executor.py::test_execute_prefers_total_amounts_and_falls_back_to_result_amounts
+- tests/integration/test_jupiter_executor.py::test_execute_rejected_or_failed_status
+- tests/integration/test_jupiter_executor.py::test_executor_requires_guard_authorization
+- tests/integration/test_jupiter_executor.py::test_expired_quote_before_signing
+- tests/integration/test_jupiter_executor.py::test_happy_path_buy_confirmed_and_reconciled_from_chain
+- tests/integration/test_jupiter_executor.py::test_http_200_success_without_onchain_confirmation_becomes_unknown_not_confirmed
+- tests/integration/test_jupiter_executor.py::test_live_guard_lists_every_blocker_and_private_key_alone_never_enables
+- tests/integration/test_jupiter_executor.py::test_malicious_transaction_from_api_is_not_signed_nor_submitted
+- tests/integration/test_jupiter_executor.py::test_network_failure_on_execute_yields_unknown_and_never_resubmits
+- tests/integration/test_jupiter_executor.py::test_quote_fields_slippage_swapmode_threshold_and_builderror_are_enforced
+- tests/integration/test_jupiter_executor.py::test_quote_with_wrong_mint_or_excess_input_or_bad_price_is_rejected_without_signing
+- tests/integration/test_jupiter_executor.py::test_reconcile_failed_expired_and_signed_never_sent
+- tests/integration/test_jupiter_executor.py::test_reconcile_uses_last_valid_block_height_not_wall_clock
+- tests/integration/test_jupiter_executor.py::test_request_shape_matches_documented_v2_contract
+- tests/integration/test_jupiter_executor.py::test_sell_flow_amounts_and_price
+- tests/integration/test_jupiter_executor.py::test_token_outside_allowlist_amount_limits_and_balance
+- tests/integration/test_jupiter_executor.py::test_unsafe_transaction_is_never_signed
+- tests/integration/test_live_build_no_orders.py::test_live_runtime_builds_and_runs_cycles_without_sending_or_quoting_anything
+- tests/integration/test_live_build_no_orders.py::test_live_startup_fails_safe_on_decimals_mismatch_and_still_sends_nothing
+- tests/integration/test_paper_service.py::test_blocked_marker_does_not_hide_the_decided_candle
+- tests/integration/test_paper_service.py::test_duplicate_intent_is_rejected_by_database
+- tests/integration/test_paper_service.py::test_full_paper_lifecycle_and_persistence_across_restart
+- tests/integration/test_paper_service.py::test_invalid_state_transition_rejected
+- tests/integration/test_paper_service.py::test_kill_switch_blocks_entries_but_allows_exits
+- tests/integration/test_paper_service.py::test_stale_or_unavailable_data_blocks_entries_and_trips_kill_eventually
+- tests/integration/test_paper_service.py::test_startup_fails_safe_when_data_invalid_and_blocks_cycle
+- tests/integration/test_risk_recovery_paths.py::test_cumulative_loss_trips_kill_switch_and_next_start_is_safe_mode
+- tests/integration/test_risk_recovery_paths.py::test_daily_loss_limit_blocks_entries_through_the_service_path
+- tests/integration/test_risk_recovery_paths.py::test_insufficient_fee_reserve_blocks_entry
+- tests/integration/test_risk_recovery_paths.py::test_local_vs_onchain_balance_divergence_trips_kill_switch
+- tests/integration/test_risk_recovery_paths.py::test_risk_state_survives_restart_including_cooldown_and_daily_reference
+- tests/integration/test_risk_recovery_paths.py::test_safe_mode_recovers_automatically_when_pending_intent_resolves
+- tests/integration/test_risk_recovery_paths.py::test_safe_mode_still_executes_stop_exit_for_open_positions
+- tests/integration/test_risk_recovery_paths.py::test_unknown_for_too_long_trips_kill_switch
+- tests/security/test_live_disabled_and_paper_isolation.py::test_cli_invalid_config_blocks_startup
+- tests/security/test_live_disabled_and_paper_isolation.py::test_cli_live_without_confirmation_exits_2_and_never_trades
+- tests/security/test_live_disabled_and_paper_isolation.py::test_cli_show_config_masks_secrets_and_default_mode_is_paper
+- tests/security/test_live_disabled_and_paper_isolation.py::test_env_example_and_gitignore_are_safe
+- tests/security/test_live_disabled_and_paper_isolation.py::test_failed_buy_is_not_retried_within_the_same_candle
+- tests/security/test_live_disabled_and_paper_isolation.py::test_live_blocked_when_signer_invalid_even_with_confirmations
+- tests/security/test_live_disabled_and_paper_isolation.py::test_live_requires_double_confirmation_before_touching_secret
+- tests/security/test_live_disabled_and_paper_isolation.py::test_paper_executor_source_has_no_signing_or_network_capability
+- tests/security/test_live_disabled_and_paper_isolation.py::test_paper_runtime_never_loads_signer_even_if_secret_and_live_flags_present
+- tests/security/test_live_disabled_and_paper_isolation.py::test_pending_unknown_intent_blocks_new_entries_via_health
+- tests/security/test_live_disabled_and_paper_isolation.py::test_repeated_execution_failures_trip_kill_switch
+- tests/security/test_live_disabled_and_paper_isolation.py::test_settings_repr_never_contains_secrets
+- tests/security/test_logging_redaction.py::test_exception_traces_are_redacted
+- tests/security/test_logging_redaction.py::test_json_array_secret_and_kv_pairs_redacted
+- tests/security/test_logging_redaction.py::test_private_key_base58_is_redacted_in_message
+- tests/security/test_logging_redaction.py::test_secret_named_fields_in_data_are_redacted
+- tests/security/test_malicious_transactions.py::test_allocate_and_other_system_instructions_rejected
+- tests/security/test_malicious_transactions.py::test_allowlisted_token_does_not_make_a_malicious_transaction_acceptable
+- tests/security/test_malicious_transactions.py::test_ata_derivation_properties
+- tests/security/test_malicious_transactions.py::test_create_account_owner_and_token_account_owner_must_be_safe
+- tests/security/test_malicious_transactions.py::test_router_arguments_must_be_readable_and_within_limits
+- tests/security/test_malicious_transactions.py::test_signer_count_and_wallet_position_rules
+- tests/security/test_malicious_transactions.py::test_sol_transfer_to_attacker_disguised_with_syncnative_rejected
+- tests/security/test_malicious_transactions.py::test_sol_transfer_to_attacker_rejected_even_within_cap
+- tests/security/test_malicious_transactions.py::test_system_assign_of_wallet_account_is_rejected
+- tests/security/test_malicious_transactions.py::test_token_authority_and_delegate_instructions_rejected_with_correct_program
+- tests/security/test_malicious_transactions.py::test_transfer_to_wallets_own_wsol_ata_is_accepted_and_capped
+- tests/security/test_token_authorities.py::test_active_authorities_rejected_unless_explicitly_allowed
+- tests/security/test_token_authorities.py::test_clean_mint_passes
+- tests/security/test_token_authorities.py::test_decimals_mismatch_rejected
+- tests/security/test_token_authorities.py::test_missing_unparseable_or_foreign_program_rejected
+- tests/security/test_token_authorities.py::test_startup_enters_safe_mode_when_a_token_fails_verification
+- tests/security/test_token_authorities.py::test_token2022_risky_extensions_rejected
+- tests/security/test_tx_validation_and_signer.py::test_ata_creation_only_for_our_wallet
+- tests/security/test_tx_validation_and_signer.py::test_close_account_destination_must_be_wallet
+- tests/security/test_tx_validation_and_signer.py::test_dangerous_token_instructions_rejected
+- tests/security/test_tx_validation_and_signer.py::test_fee_payer_must_be_our_wallet
+- tests/security/test_tx_validation_and_signer.py::test_garbage_truncated_and_oversized_rejected
+- tests/security/test_tx_validation_and_signer.py::test_priority_fee_cap_and_missing_swap_and_lookup_program
+- tests/security/test_tx_validation_and_signer.py::test_signer_from_file_requires_strict_permissions
+- tests/security/test_tx_validation_and_signer.py::test_signer_hides_secret_and_checks_wallet_match
+- tests/security/test_tx_validation_and_signer.py::test_signer_signs_only_validated_and_signature_verifies
+- tests/security/test_tx_validation_and_signer.py::test_sol_transfer_limits_and_source
+- tests/security/test_tx_validation_and_signer.py::test_unknown_program_rejected
+- tests/security/test_tx_validation_and_signer.py::test_valid_swap_transaction_passes
+- tests/security/test_tx_validation_and_signer.py::test_valid_with_market_maker_second_signer
+- tests/security/test_tx_validation_and_signer.py::test_validated_transaction_cannot_be_forged
+- tests/unit/test_config.py::test_default_mode_is_paper_and_live_never_implicit
+- tests/unit/test_config.py::test_env_overrides_and_validation_errors
+- tests/unit/test_config.py::test_redacted_dict_hides_secrets
+- tests/unit/test_config.py::test_tokens_file_validation
+- tests/unit/test_config.py::test_validate_returns_list
+- tests/unit/test_data_validation.py::test_close_grace_excludes_just_closed_candle_until_provider_settles
+- tests/unit/test_data_validation.py::test_closed_only_drops_forming_candle
+- tests/unit/test_data_validation.py::test_duplicates_gaps_nan_and_stale_are_rejected
+- tests/unit/test_data_validation.py::test_misaligned_timestamps_rejected
+- tests/unit/test_data_validation.py::test_resample_discards_incomplete_buckets
+- tests/unit/test_data_validation.py::test_single_missing_candle_is_rejected_by_default_but_old_gaps_outside_window_are_not
+- tests/unit/test_data_validation.py::test_stale_latest_price_is_not_used_for_stop_protection
+- tests/unit/test_data_validation.py::test_unordered_and_inconsistent_ohlc_rejected
+- tests/unit/test_data_validation.py::test_valid_candles_pass
+- tests/unit/test_indicators.py::test_atr_constant_range
+- tests/unit/test_indicators.py::test_bollinger_bands_symmetry_and_width
+- tests/unit/test_indicators.py::test_correlation_of_identical_series_is_one_and_handles_missing
+- tests/unit/test_indicators.py::test_ema_matches_manual_recursion
+- tests/unit/test_indicators.py::test_indicators_are_causal
+- tests/unit/test_indicators.py::test_macd_hist_is_line_minus_signal
+- tests/unit/test_indicators.py::test_relative_volume_excludes_current_candle
+- tests/unit/test_indicators.py::test_rsi_extremes_and_flat
+- tests/unit/test_indicators.py::test_rsi_known_value_wilder
+- tests/unit/test_providers.py::test_csv_provider_reads_filters_future_and_requires_file
+- tests/unit/test_providers.py::test_gecko_provider_parses_caches_and_fails_closed
+- tests/unit/test_providers.py::test_synthetic_provider_is_deterministic_and_causal
+- tests/unit/test_resilience_alerts.py::test_alerts_redact_secrets_persist_and_never_raise
+- tests/unit/test_resilience_alerts.py::test_backoff_has_jitter_and_cap
+- tests/unit/test_resilience_alerts.py::test_circuit_breaker_opens_and_half_opens
+- tests/unit/test_resilience_alerts.py::test_retry_only_recoverable_with_limit_and_backoff
+- tests/unit/test_risk.py::test_consecutive_losses_cooldown_and_trades_per_day
+- tests/unit/test_risk.py::test_cumulative_loss_trips_kill_request_and_state_roundtrip
+- tests/unit/test_risk.py::test_daily_loss_limit_resets_next_utc_day
+- tests/unit/test_risk.py::test_exit_precedence_and_gap
+- tests/unit/test_risk.py::test_kill_switch_persists_and_requires_explicit_resume
+- tests/unit/test_risk.py::test_risk_manager_limits
+- tests/unit/test_risk.py::test_sizing_caps_and_rejections
+- tests/unit/test_risk.py::test_sizing_loss_at_stop_matches_planned_risk
+- tests/unit/test_risk.py::test_stops_atr_tp_breakeven_trailing_never_decrease
+- tests/unit/test_strategy.py::test_buy_on_uptrend_cross_with_htf_confirmation
+- tests/unit/test_strategy.py::test_htf_candle_not_used_before_it_closes
+- tests/unit/test_strategy.py::test_htf_contrary_blocks_entry
+- tests/unit/test_strategy.py::test_low_volume_and_low_liquidity_and_cost_block
+- tests/unit/test_strategy.py::test_missing_htf_means_no_trade
+- tests/unit/test_strategy.py::test_no_lookahead_features_identical_when_future_removed
+- tests/unit/test_strategy.py::test_no_trade_during_warmup
+- tests/unit/test_strategy.py::test_sell_on_trend_loss_and_hold_otherwise

@@ -1,0 +1,33 @@
+# Segredos e credenciais — NUNCA versionar
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+keypair*.json
+id.json
+secrets/
+wallet*.json
+
+# Dados e estado locais
+data/*
+!data/.gitkeep
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+logs/
+reports/*
+!reports/.gitkeep
+config/tokens.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/

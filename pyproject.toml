@@ -1,0 +1,37 @@
+[project]
+name = "solana-trading-bot"
+version = "1.0.0"
+description = "Robô de trading spot na Solana via Jupiter (padrão: PAPER; LIVE desabilitado por padrão)"
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+  "pandas==2.3.3",
+  "numpy==2.2.6",
+  "cryptography==50.0.1",
+  "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.5",
+  "ruff==0.11.13",
+  "mypy==1.16.0",
+  "tabulate==0.9.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "tests", "tests/dashboard"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "UP006", "UP007", "UP035", "B008"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = false
