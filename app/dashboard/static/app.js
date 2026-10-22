@@ -110,6 +110,65 @@ function renderLogs(js) {
   fill("tb-erros", js.erros.slice(0, 40).map((l) => [when(l.ts), l.nivel || ND, l.origem || ND, l.mensagem]), 4, "Nenhum erro no arquivo de log.");
   $("log-info").textContent = js.arquivo_existe ? "Arquivo de log: " + js.arquivo_de_log : "Arquivo de log ainda não existe: " + (js.arquivo_de_log || "(desabilitado)");
 }
+function linkOrText(url, text) {
+  if (typeof url === "string" && /^https?:\/\//i.test(url)) {
+    const a = el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, text);
+    return a;
+  }
+  return document.createTextNode(String(text));
+}
+const ESTADO_FONTE = { ok: "OK", stale: "DESATUALIZADA", unavailable: "INDISPONÍVEL", invalid: "RESPOSTA INVÁLIDA", disabled: "DESABILITADA" };
+const DOMINIO = { solana_status: "Status da Solana", crypto_news: "Notícias cripto", macro_us: "Macro EUA" };
+const SAUDE_CLASSE = { saudavel: "ok", degradado: "warn", critico: "bad", contingencia: "bad", desligado: "" };
+const FASE = { antes: "antes da divulgação", depois: "depois da divulgação" };
+function fmt(v, d = 2) { return isNum(v) ? num(v, d) : ND; }
+function renderMacro(m) {
+  const box = $("macro-msg");
+  if (!m) { box.textContent = "Camada macro desligada ou sem dados."; box.className = "intel-msg"; for (const id of ["tb-macro-janelas", "tb-macro-proximos", "tb-macro-divulgados", "tb-macro-mercado"]) fill(id, [], 9, "—"); $("macro-pendentes").replaceChildren(); return; }
+  const j = m.janelas_ativas || [];
+  box.textContent = j.length ? j.length + " janela(s) de risco macro ativa(s): " + (m.bloqueia ? "novas entradas BLOQUEADAS (política macro_high_policy=block)." : "risco por operação reduzido (× " + fmt(m.escala_de_risco, 2) + ").")
+    : (m.calendario_vazio ? "Calendário macro VAZIO: sem janelas de risco (crie config/macro_calendar.json). Isto NÃO significa ausência de eventos." : "Nenhuma janela de risco macro ativa agora.");
+  box.className = "intel-msg " + (j.length ? "warn" : m.calendario_vazio ? "bad" : "ok");
+  fill("tb-macro-janelas", j.map((w) => [w.evento, FASE[w.fase] || w.fase, String(w.importancia), when(w.horario_utc), w.horario_local, when(w.inicio_utc) + " → " + when(w.fim_utc), w.confianca_do_horario, w.motivo]), 8, "Nenhuma janela ativa.");
+  fill("tb-macro-proximos", (m.proximos || []).map((e) => [e.nome, String(e.importancia), when(e.horario_utc), e.horario_local + " " + e.fuso_original, fmt(e.faltam_horas, 1), e.confianca_do_horario, e.resultado]), 7, "Nenhum evento no calendário para o período.");
+  fill("tb-macro-divulgados", (m.divulgados || []).map((v) => [v.indicador, v.periodo, when(v.divulgado_em), fmt(v.valor_divulgado, 2), isNum(v.expectativa) ? fmt(v.expectativa, 2) : "N/D (a fonte não fornece)", fmt(v.anterior, 2),
+    isNum(v.anterior_revisado) ? fmt(v.anterior_revisado, 2) : "—", v.unidade || "", v.nota || "—"]), 9, "Nenhum valor divulgado coletado ainda.");
+  fill("tb-macro-mercado", (m.mercado || []).map((x) => [x.indicador, x.data, fmt(x.valor, 3), fmt(x.anterior, 3), fmt(x.variacao_bps, 1), when(x.disponivel_em)]), 6, "Sem dados de mercado.");
+  const ul = $("macro-pendentes"); ul.replaceChildren();
+  for (const t of m.pendentes || []) ul.append(el("li", null, t));
+}
+function renderIntel(js) {
+  $("intel-modo").textContent = "— modo: " + js.modo;
+  $("intel-aviso").textContent = js.aviso || "";
+  const box = $("intel-msg");
+  box.textContent = js.mensagem + (js.ultima_atualizacao ? "  Última atualização das fontes: " + when(js.ultima_atualizacao) + "." : "") + ((js.observacoes || []).length ? "  Obs.: " + js.observacoes.join("; ") : "");
+  box.className = "intel-msg " + (js.situacao === "fontes_indisponiveis" ? "bad" : js.situacao === "alertas" ? "warn" : js.situacao === "nenhum_evento" ? "ok" : "");
+  const sa = js.saude || {};
+  const sbox = $("intel-saude");
+  sbox.textContent = "Saúde do módulo: " + String(sa.geral || ND).toUpperCase() + " — " + (sa.mensagem || "");
+  sbox.className = "intel-msg " + (SAUDE_CLASSE[sa.geral] || "");
+  const cbox = $("intel-conting");
+  const ct = js.contingencia;
+  if (ct) {
+    cbox.hidden = false;
+    cbox.textContent = "CONTINGÊNCIA — fonte(s) " + (ct.fontes || []).join(", ") + " indisponível(is) há " + fmt(ct.horas, 1) + " h (desde " + when(ct.desde) + "; limite " + fmt(ct.limite_h, 1) + " h). Política aplicada: " + ct.politica + ". "
+      + (ct.mensagem_politica || "") + " Decisões de entrada afetadas desde então: " + (isNum(ct.decisoes_afetadas) ? ct.decisoes_afetadas : ND) + ".";
+  } else { cbox.hidden = true; cbox.textContent = ""; }
+  fill("tb-intel-fontes", (js.fontes || []).map((f) => [f.name, DOMINIO[f.domain] || f.domain || ND, f.critical ? "SIM" : "não", ESTADO_FONTE[f.state] || f.state, f.state === "ok" || f.state === "disabled" ? "—" : when(f.down_since),
+    when(f.last_ok_at), when(f.last_attempt_at), String(f.consecutive_failures || 0),
+    [f.error_kind || "", f.http_status ? "HTTP " + f.http_status : "", isNum(f.duration_ms) ? f.duration_ms + " ms" : ""].filter(Boolean).join(" / ") || "—",
+    [f.last_error || "", f.recovering ? "recuperando " + f.recovering : "", f.retry_at ? "nova tentativa após " + when(f.retry_at) : ""].filter(Boolean).join(" | ") || "—"]), 10,
+    js.modo === "off" ? "Camada desligada." : "Nenhuma fonte configurada (veja config/intel_sources.json).");
+  fill("tb-intel-alertas", (js.alertas || []).map((a) => [a.impacto, a.categoria + (a.ambiente && a.ambiente !== "desconhecido" ? " [" + a.ambiente + "]" : ""), (a.tokens || [a.ativo]).join(", "), a.certeza, String(a.confiabilidade),
+    String(a.fontes_distintas) + (a.independencia === "incerta" ? " (independência INCERTA)" : ""), el("td", null, linkOrText(a.link, a.titulo)), when(a.expira_em), a.bloqueia ? "SIM" : "não", a.motivo]), 10,
+    js.situacao === "fontes_indisponiveis" ? "Sem dados confiáveis (fontes indisponíveis/desatualizadas)." : "Nenhum alerta ativo.");
+  fill("tb-intel-noticias", (js.noticias || []).map((n) => [when(n.publicado_em), when(n.coletado_em), n.fonte, el("td", null, linkOrText(n.link, n.titulo)), (n.ativos || []).join(", ") || "—",
+    n.categoria + (n.indicador ? " (" + n.indicador + ")" : ""), n.classificacao + (n.desmentido ? " (desmentido/correção)" : ""), n.certeza + " / " + (n.natureza || ND), String(n.confiabilidade), n.impacto, (n.sinalizadores || []).join(", ") || "—"]), 11, "Nenhuma notícia coletada ainda.");
+  fill("tb-intel-decisoes", (js.decisoes || []).map((d) => [when(d.ts), d.simbolo, d.tecnico, d.modo, d.acao, isNum(d.escala_de_risco) ? num(d.escala_de_risco, 2) : ND, d.divergencia || "—", (d.justificativa || []).join(" | ")]), 8,
+    "Nenhuma decisão influenciada/avaliada ainda.");
+  fill("tb-intel-eventos", (js.eventos || []).map((e) => [when(e.ts), e.tipo, e.fonte || "—", e.gravidade, e.detalhe]), 5, "Nenhum evento de saúde registrado.");
+  renderMacro(js.macro);
+}
 let cfgDone = false;
 function renderConfig(c) {
   if (cfgDone) return; cfgDone = true;
@@ -128,6 +187,7 @@ async function refresh() {
     const [s, m, p, d, l] = await Promise.all([api("/api/status"), api("/api/metrics"), api("/api/positions"), api("/api/decisions?limite=80"), api("/api/logs?limite=60")]);
     renderStatus(s); renderMetrics(m); renderPositions(p); renderDecisions(d); renderLogs(l);
     if (!cfgDone) renderConfig(await api("/api/config"));
+    try { renderIntel(await api("/api/intel?limite=50")); } catch (e) { $("intel-msg").textContent = "Não foi possível ler a camada de notícias: " + e.message; $("intel-msg").className = "intel-msg bad"; }
   } catch (e) { say("Não foi possível ler o estado: " + e.message, false); }
 }
 

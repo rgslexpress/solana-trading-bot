@@ -17,6 +17,7 @@ import conftest  # noqa: E402,F401  (aplica a tolerância de limpeza de diretór
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 sys.path.insert(0, str(ROOT / "tests" / "dashboard"))
+sys.path.insert(0, str(ROOT / "tests" / "intel"))
 
 
 def main() -> int:

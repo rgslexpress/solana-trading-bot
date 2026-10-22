@@ -10,6 +10,8 @@ if not exist .venv\Scripts\activate.bat (
   exit /b 1
 )
 if not exist config\tokens.json copy config\tokens.example.json config\tokens.json >nul
+if not exist config\intel_sources.json copy config\intel_sources.example.json config\intel_sources.json >nul
+if not exist config\macro_calendar.json copy config\macro_calendar.example.json config\macro_calendar.json >nul
 call .venv\Scripts\activate.bat
 python -m app.dashboard --abrir
 set RC=%ERRORLEVEL%

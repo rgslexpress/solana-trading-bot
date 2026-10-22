@@ -30,3 +30,9 @@ td.wrap { max-width:420px; word-break:break-word; }
 .tag { padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700; background:#e8ecf1; } .tag.BUY { background:#dff5e8; color:var(--ok); } .tag.SELL { background:#fde7e4; color:var(--bad); } .tag.NO_TRADE { background:#eef0f3; color:var(--mut); } .tag.HOLD { background:#e1efff; color:var(--acc); }
 .cfg { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; } .cfg div.g { border:1px solid var(--line); border-radius:8px; padding:8px 10px; } .cfg h3 { margin:0 0 4px; } .cfg dl { margin:0; display:grid; grid-template-columns:1fr auto; gap:2px 10px; font-size:12px; } .cfg dd { margin:0; font-weight:600; text-align:right; }
 footer { margin-top:20px; }
+
+.intel-msg { padding:8px 12px; border-radius:6px; background:#eef0f3; font-weight:600; margin:6px 0 10px; }
+.intel-msg.ok { background:#dff5e8; color:var(--ok); } .intel-msg.warn { background:#fff1cc; color:var(--warn); } .intel-msg.bad { background:#fde7e4; color:var(--bad); }
+td a { color:var(--acc); word-break:break-word; }
+
+h4 { margin:12px 0 4px; font-size:13px; color:var(--mut); }

@@ -9,6 +9,7 @@ Definições (documentadas no README):
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -109,7 +110,12 @@ class RiskManager:
         positions: list[Position],
         fee_reserve_ok: bool = True,
         max_order_quote: float | None = None,
+        risk_scale: float = 1.0,
     ) -> EntryDecision:
+        """`risk_scale` (ex.: camada de notícias) só pode REDUZIR o risco: valores > 1 são limitados a 1; inválidos recusam a entrada."""
+        if not math.isfinite(risk_scale) or risk_scale <= 0:
+            return EntryDecision(False, reasons=["escala de risco inválida (recusada por segurança)"])
+        risk_scale = min(1.0, risk_scale)
         reasons = self.entry_block_reasons(now, equity)
         kr = self.kill_reason(equity)
         if kr:
@@ -130,7 +136,7 @@ class RiskManager:
         token_room = equity * self.p.max_token_exposure_pct / 100.0 - token_exp
         s = size_position(
             equity=equity,
-            risk_pct=min(self.p.risk_per_trade_pct, self.p.absolute_risk_cap_pct),
+            risk_pct=min(self.p.risk_per_trade_pct, self.p.absolute_risk_cap_pct) * risk_scale,
             entry_price=entry_price,
             stop_price=stop_price,
             costs=self.costs,

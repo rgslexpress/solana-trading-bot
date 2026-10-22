@@ -27,6 +27,8 @@ python -m pip install --upgrade pip || goto erro
 pip install -r requirements.txt || goto erro
 if not exist .env copy .env.example .env >nul
 if not exist config\tokens.json copy config\tokens.example.json config\tokens.json >nul
+if not exist config\intel_sources.json copy config\intel_sources.example.json config\intel_sources.json >nul
+if not exist config\macro_calendar.json copy config\macro_calendar.example.json config\macro_calendar.json >nul
 python scripts\check_environment.py
 echo.
 echo Instalacao concluida. Revise .env e config\tokens.json (confira os mints).

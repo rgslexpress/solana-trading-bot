@@ -59,3 +59,6 @@ Reais (servidor HTTP e controlador reais em loopback, SQLite real, threads reais
 - Alterar configuração/limites **não** é possível pela interface (somente leitura) — deliberado nesta fase.
 - Perdas por indisponibilidade: se o computador dormir/desligar, o robô não monitora; em paper isso só afeta a simulação.
 - O painel mostra apenas PAPER; a conclusão do frontend **não** é aprovação para operar com dinheiro real.
+
+## Seção "News & Market Intelligence"
+Somente leitura (`GET /api/intel`). Mostra a **saúde de cada fonte** (SAUDÁVEL/DEGRADADO/CRÍTICO/CONTINGÊNCIA; fonte crítica fora do ar nunca aparece como saudável), a caixa de **contingência** (há quanto tempo, política aplicada, decisões afetadas), alertas e bloqueios, últimas notícias, o **histórico de como o módulo influenciou cada decisão**, os eventos de saúde e o bloco **Macro EUA** (janelas de risco, próximos eventos com horário UTC e local, valores divulgados com expectativa N/D quando a fonte não fornece, rendimentos do Tesouro e fontes pendentes). "Nenhum evento relevante" (verde) só aparece com fontes saudáveis; fontes indisponíveis **não** significam ausência de eventos. Veja `docs/NEWS_INTEL.md`, seção 10.

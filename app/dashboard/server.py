@@ -33,7 +33,7 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'se
 STATIC_FILES = {"/static/app.js": ("app.js", "text/javascript; charset=utf-8"), "/static/app.css": ("app.css", "text/css; charset=utf-8")}
 POST_ROUTES = ("/api/bot/start", "/api/bot/pause-entries", "/api/bot/resume-entries", "/api/bot/stop", "/api/bot/emergency",
                "/api/kill-switch/resume", "/api/panel/shutdown")
-GET_ROUTES = ("/", "/api/status", "/api/metrics", "/api/positions", "/api/decisions", "/api/logs", "/api/config", *STATIC_FILES)
+GET_ROUTES = ("/", "/api/status", "/api/metrics", "/api/positions", "/api/decisions", "/api/logs", "/api/config", "/api/intel", *STATIC_FILES)
 
 
 def validate_loopback_host(host: str) -> str:
@@ -168,6 +168,8 @@ class PanelHandler(BaseHTTPRequestHandler):
                 return {"decisoes": readmodel.decisions_view(conn, limit)}
             if path == "/api/logs":
                 return readmodel.logs_view(conn, c.s.log_file, limit)
+            if path == "/api/intel":
+                return readmodel.intel_view(conn, c.s, c.clock(), min(max(limit, 1), 200))
         return {}
 
     def _drain_body(self) -> tuple[int, bytes]:

@@ -26,6 +26,7 @@ from app.monitoring.health import HealthCheck, HealthMonitor, HealthReport
 from app.risk.kill_switch import KillSwitch
 from app.risk.risk_manager import RiskManager, RiskState
 from app.risk.stops import check_exit, initial_stop, update_stop
+from app.intel.runtime import IntelRuntime
 from app.storage.database import Database
 from app.strategy.signal_engine import ExecContext, compute_features, decide
 
@@ -64,10 +65,12 @@ class TradingService:
         quote: TokenInfo,
         reference: TokenInfo | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+        intel: IntelRuntime | None = None,
     ):
         self.s, self.db, self.provider, self.executor, self.ks, self.alerts = settings, db, provider, executor, kill_switch, alerts
         self.tokens, self.quote, self.reference, self.clock = tokens, quote, reference, clock
         self.costs = CostModel.from_params(settings.execution)
+        self.intel = intel  # News & Market Intelligence (opcional; só restringe entradas, nunca opera)
         self.risk = RiskManager(settings.risk, settings.execution, RiskState.from_dict(db.get_meta("risk_state", {})))
         self.positions: dict[str, Position] = {}
         self.ready = False
@@ -257,6 +260,11 @@ class TradingService:
             tok = next((t for t in self.tokens.values() if t.mint == p.mint), None)
             if tok:
                 self._monitor_position(p, tok, now, rep)
+        # 1b) notícias externas (falha isolada; nunca afeta stops nem o restante do ciclo)
+        if self.intel is not None:
+            stats = self.intel.refresh(now)
+            if stats:
+                rep.actions.append(f"notícias: {stats['novos']} novas, {stats['fontes_ok']} fonte(s) ok, {stats['fontes_falha']} com falha")
         # 2) sinais por token
         health = self.health.run()
         for tok in self.tokens.values():
@@ -305,7 +313,39 @@ class TradingService:
                 self.db.save_signal(tok.mint, tok.symbol, candle_ts + "#bloqueio", "NO_TRADE", dec.score, [], [block])
                 rep.actions.append(f"{tok.symbol}: BUY bloqueado ({block})")
                 return
-            self._enter(tok, row, liq, now, rep)
+            risk_scale, decision_id = 1.0, None
+            if self.intel is not None and self.intel.active:
+                assessment = self.intel.assess(tok.symbol, now, "BUY")
+                enforce = self.intel.params.mode == "enforce"
+                applied = enforce and assessment.would_change
+                action = ("bloqueou a entrada" if enforce and assessment.block else "reduziu o risco" if enforce and assessment.risk_scale < 1.0
+                          else "SHADOW: bloquearia" if assessment.block else "SHADOW: reduziria o risco" if assessment.risk_scale < 1.0 else "sem efeito")
+                # AUDITORIA É SÓ OBSERVAÇÃO: se gravar falhar (disco cheio, permissão, banco travado), a decisão NÃO muda
+                # (nem em shadow nem em enforce). A falha é contada, registrada no log e mostrada no painel.
+                decision_id = self.intel.record_decision(lambda: {
+                    "ts": now.isoformat(), "symbol": tok.symbol, "mint": tok.mint, "candle_ts": candle_ts, "technical": dec.type.value, "mode": assessment.mode,
+                    "data_state": assessment.data_state, "action": action, "would_change": assessment.would_change, "applied": applied,
+                    "risk_scale": assessment.risk_scale, "divergence": assessment.divergence, "alerts": [a.to_public() for a in assessment.alerts],
+                    "rationale": assessment.rationale})
+                if decision_id is None and self.intel.audit_failures:
+                    rep.actions.append(f"{tok.symbol}: AUDITORIA DE NOTÍCIAS INDISPONÍVEL ({self.intel.audit_failures} falha(s)); a decisão de trading não foi afetada")
+                if enforce and assessment.block:
+                    why = "; ".join(assessment.block_reasons)
+                    try:
+                        self.db.save_signal(tok.mint, tok.symbol, candle_ts + "#noticias", "NO_TRADE", dec.score, [], ["notícias: " + why])
+                    except Exception:  # noqa: BLE001 - o bloqueio (restrição) vale mesmo que o marcador não possa ser gravado
+                        self.intel.note_audit_failure("marcador de sinal")
+                    rep.actions.append(f"{tok.symbol}: BUY bloqueado pela camada de notícias ({why})")
+                    return
+                if enforce:
+                    risk_scale = min(1.0, assessment.risk_scale)
+                if assessment.divergence:
+                    rep.actions.append(f"{tok.symbol}: {assessment.divergence}")
+            before = self.positions.get(tok.mint)
+            self._enter(tok, row, liq, now, rep, risk_scale=risk_scale)
+            after = self.positions.get(tok.mint)
+            if decision_id and after is not None and after is not before and self.intel is not None:
+                self.intel.link_position(decision_id, after.id)
 
     def _entry_block(self, health: HealthReport) -> str | None:
         if self.entries_paused:
@@ -317,7 +357,7 @@ class TradingService:
         return None
 
     # ------------------------------------------------------------------ entrada / saída
-    def _enter(self, tok: TokenInfo, row: dict, liq: float | None, now: datetime, rep: CycleReport) -> None:
+    def _enter(self, tok: TokenInfo, row: dict, liq: float | None, now: datetime, rep: CycleReport, risk_scale: float = 1.0) -> None:
         sp, rp, xp = self.s.strategy, self.s.risk, self.s.execution
         price, atr = float(row["close"]), float(row["atr"])
         st = initial_stop(price, atr, rp)
@@ -325,7 +365,7 @@ class TradingService:
         dec = self.risk.check_entry(
             now=now, equity=eq, cash=max(cash * 0.995 - xp.network_fee_quote, 0.0), mint=tok.mint, entry_price=price, stop_price=st.stop,
             liquidity_usd=liq, positions=list(self.positions.values()), fee_reserve_ok=self.executor.fee_reserve_ok(),
-            max_order_quote=xp.max_order_quote if self.is_live else None,
+            max_order_quote=xp.max_order_quote if self.is_live else None, risk_scale=risk_scale,
         )
         if dec.trip_kill_switch:
             self.ks.trip(dec.trip_kill_switch)

@@ -36,7 +36,11 @@ const tick = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {
   await tick(600);
   const out = { estado_antes: byId.estado.textContent, cards: byId.cards.textContent, avisos: byId.avisos.textContent, live: byId["live-motivo"].textContent, msg: byId.msg.textContent,
-    dados: tbodies["tb-dados"].textContent, abertas: tbodies["tb-abertas"].textContent, btn_iniciar_desabilitado: byId["btn-iniciar"].disabled, btn_parar_desabilitado: byId["btn-parar"].disabled };
+    dados: tbodies["tb-dados"].textContent, abertas: tbodies["tb-abertas"].textContent, btn_iniciar_desabilitado: byId["btn-iniciar"].disabled, btn_parar_desabilitado: byId["btn-parar"].disabled,
+    intel_msg: byId["intel-msg"].textContent, intel_saude: byId["intel-saude"].textContent, intel_conting: byId["intel-conting"].textContent, intel_conting_oculto: byId["intel-conting"].hidden,
+    intel_fontes: tbodies["tb-intel-fontes"].textContent, intel_eventos: tbodies["tb-intel-eventos"].textContent, macro_msg: byId["macro-msg"].textContent, macro_janelas: tbodies["tb-macro-janelas"].textContent,
+    macro_proximos: tbodies["tb-macro-proximos"].textContent, macro_divulgados: tbodies["tb-macro-divulgados"].textContent, macro_mercado: tbodies["tb-macro-mercado"].textContent,
+    macro_pendentes: byId["macro-pendentes"].textContent };
   if (click) {
     const b = buttons.find((x) => x.dataset.acao === click);
     for (const fn of b.listeners.click || []) await fn();

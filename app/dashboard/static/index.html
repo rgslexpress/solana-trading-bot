@@ -54,6 +54,38 @@
     <table id="tb-dados"><thead><tr><th>Token</th><th>Fonte</th><th>Situação</th><th>Idade do último candle fechado</th><th>Última verificação</th><th>Último preço</th></tr></thead><tbody></tbody></table>
   </section>
 
+  <section id="sec-intel">
+    <h2>News &amp; Market Intelligence <span class="small" id="intel-modo"></span></h2>
+    <p class="small" id="intel-aviso"></p>
+    <div id="intel-msg" class="intel-msg" role="status"></div>
+    <div id="intel-saude" class="intel-msg" role="status"></div>
+    <div id="intel-conting" class="intel-msg bad" role="alert" hidden></div>
+    <h3>Saúde de cada fonte</h3>
+    <p class="small">Uma fonte secundária saudável nunca esconde uma fonte CRÍTICA fora do ar. "Desde" = início do problema atual.</p>
+    <table id="tb-intel-fontes"><thead><tr><th>Fonte</th><th>Domínio</th><th>Crítica?</th><th>Estado</th><th>Desde</th><th>Última atualização OK</th><th>Última tentativa</th><th>Falhas seguidas</th><th>Tipo de erro / HTTP / duração</th><th>Detalhe</th></tr></thead><tbody></tbody></table>
+    <h3>Alertas ativos e bloqueios</h3>
+    <table id="tb-intel-alertas"><thead><tr><th>Impacto</th><th>Categoria</th><th>Ativo(s)</th><th>Certeza</th><th>Confiança</th><th>Fontes</th><th>Notícia</th><th>Expira</th><th>Bloqueia entradas?</th><th>Motivo</th></tr></thead><tbody></tbody></table>
+    <h3>Últimas notícias coletadas</h3>
+    <table id="tb-intel-noticias"><thead><tr><th>Publicada</th><th>Coletada</th><th>Fonte</th><th>Título / link</th><th>Ativos</th><th>Categoria</th><th>Classificação</th><th>Certeza</th><th>Confiança</th><th>Impacto</th><th>Sinalizadores</th></tr></thead><tbody></tbody></table>
+    <h3>Como o módulo influenciou cada decisão</h3>
+    <table id="tb-intel-decisoes"><thead><tr><th>Quando</th><th>Token</th><th>Sinal técnico</th><th>Modo</th><th>Ação</th><th>Escala de risco</th><th>Divergência</th><th>Justificativa</th></tr></thead><tbody></tbody></table>
+    <h3>Eventos de saúde e contingência (auditoria)</h3>
+    <table id="tb-intel-eventos"><thead><tr><th>Quando</th><th>Tipo</th><th>Fonte</th><th>Gravidade</th><th>Detalhe</th></tr></thead><tbody></tbody></table>
+    <h3>Macroeconomia dos EUA (calendário, divulgações e mercado)</h3>
+    <div id="macro-msg" class="intel-msg" role="status"></div>
+    <p class="small">Evento futuro = apenas risco de volatilidade; o resultado é desconhecido. Valores divulgados não são interpretados como bons ou ruins para cripto. Expectativa/valor anterior só aparecem se a fonte os forneceu (senão N/D).</p>
+    <h4>Janelas de risco ativas</h4>
+    <table id="tb-macro-janelas"><thead><tr><th>Evento</th><th>Fase</th><th>Importância</th><th>Horário (UTC)</th><th>Horário local original</th><th>Janela (UTC)</th><th>Confiança do horário</th><th>Situação</th></tr></thead><tbody></tbody></table>
+    <h4>Próximos eventos</h4>
+    <table id="tb-macro-proximos"><thead><tr><th>Evento</th><th>Importância</th><th>Horário (UTC)</th><th>Horário local original</th><th>Faltam (h)</th><th>Confiança do horário</th><th>Resultado</th></tr></thead><tbody></tbody></table>
+    <h4>Valores divulgados</h4>
+    <table id="tb-macro-divulgados"><thead><tr><th>Indicador</th><th>Período</th><th>Disponível desde</th><th>Valor</th><th>Expectativa</th><th>Anterior</th><th>Anterior revisado</th><th>Unidade</th><th>Nota</th></tr></thead><tbody></tbody></table>
+    <h4>Condições de mercado (Tesouro dos EUA)</h4>
+    <table id="tb-macro-mercado"><thead><tr><th>Indicador</th><th>Data</th><th>Valor (%)</th><th>Anterior</th><th>Variação (bps)</th><th>Disponível desde</th></tr></thead><tbody></tbody></table>
+    <h4>Fontes macro pendentes / não integradas</h4>
+    <ul id="macro-pendentes" class="small"></ul>
+  </section>
+
   <section>
     <h2>Posições abertas (simuladas)</h2>
     <table id="tb-abertas"><thead><tr><th>Token</th><th>Quantidade</th><th>Entrada</th><th>Preço atual</th><th>Stop</th><th>Alvo</th><th>P/L não realizado</th><th>Aberta em</th></tr></thead><tbody></tbody></table>

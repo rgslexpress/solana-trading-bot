@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import typing
 from dataclasses import dataclass, field, fields, is_dataclass
 from pathlib import Path
@@ -136,6 +137,63 @@ class BacktestParams:
 
 
 @dataclass
+class IntelParams:
+    """News & Market Intelligence. Só pode RESTRINGIR (bloquear entradas / reduzir risco); nunca compra, vende ou altera stops."""
+
+    mode: str = "off"  # off | shadow (observa e registra o que mudaria, sem efeito) | enforce (aplica restrições)
+    sources_file: str = "config/intel_sources.json"
+    refresh_interval_s: float = 300.0
+    source_timeout_s: float = 8.0
+    refresh_budget_s: float = 20.0  # tempo máximo (parede) por rodada de coleta dentro do ciclo
+    max_feed_bytes: int = 1_000_000
+    max_items_per_source: int = 100
+    retention_days: int = 30  # 0 = nunca apagar o cache de notícias
+    item_max_age_h: float = 48.0  # mais antigo que isso na coleta => "antiga" (ignorada)
+    resurface_lag_h: float = 6.0
+    future_tolerance_s: float = 300.0
+    dedup_window_h: float = 72.0
+    near_dup_jaccard: float = 0.8
+    stale_after_s: float = 1800.0  # fonte sem sucesso há mais que isso => desatualizada
+    min_sources_ok: int = 1
+    unavailable_policy: str = "block_entries"  # block_entries | warn_only  (em enforce, quando fontes indisponíveis/desatualizadas/inconsistentes)
+    min_reliability_for_block: float = 0.7
+    corroboration_min_sources: int = 2
+    caution_window_s: float = 7200.0
+    caution_risk_multiplier: float = 0.5  # (0,1]: só REDUZ o risco por operação
+    user_agent: str = "solana-trading-bot-paper/1.0 (pesquisa pessoal; sem negociacao real)"
+    assumed_latency_s: float = 900.0  # replay histórico: atraso presumido entre publicação e disponibilidade
+    # --- deduplicação / independência (P0.2, P1.1) ---
+    near_dup_max_gap_h: float = 24.0  # títulos quase iguais na MESMA fonte só são "duplicada" se publicados com até esta diferença
+    syndication_title_jaccard: float = 0.6  # similaridade de título a partir da qual duas fontes contam como MESMA origem
+    syndication_text_jaccard: float = 0.5  # idem, usando título+resumo
+    independence_uncertain_jaccard: float = 0.35  # entre este valor e o de sindicalização: independência INCERTA (não conta como confirmação)
+    # --- classificação de incidentes (P1.4) ---
+    mainnet_degraded_policy: str = "caution"  # caution (padrão: "degradação" na mainnet só reduz risco) | block (trata degradação como crítico)
+    # --- saúde e contingência (P0.4, P0.5) ---
+    recovery_min_successes: int = 2  # sucessos consecutivos exigidos para considerar uma fonte recuperada
+    contingency_after_s: float = 21600.0  # 6 h: fonte crítica fora do ar por mais que isso => estado de CONTINGÊNCIA (nunca libera sozinho)
+    contingency_policy: str = "keep_restriction"  # keep_restriction (padrão: mantém a restrição) | reduced_risk (explícito: libera entradas com risco reduzido)
+    contingency_risk_multiplier: float = 0.25  # (0,1] usado só se contingency_policy=reduced_risk
+    # --- coleta (P1.7) ---
+    background_fetch: bool = True  # busca nas fontes em thread de fundo: o ciclo de trading nunca espera pela rede
+    total_timeout_s: float = 20.0  # prazo TOTAL por requisição (além dos timeouts de conexão/leitura)
+    backoff_base_s: float = 900.0  # após HTTP 429 (ou Retry-After): espera mínima, dobrando a cada novo 429
+    backoff_max_s: float = 21600.0
+    # --- macroeconomia dos EUA ---
+    macro_enabled: bool = True  # só tem efeito se intel.mode != off
+    macro_calendar_file: str = "config/macro_calendar.json"
+    macro_high_pre_s: float = 1800.0  # janela ANTES de divulgações de alta importância
+    macro_high_post_s: float = 3600.0  # janela DEPOIS
+    macro_medium_pre_s: float = 900.0
+    macro_medium_post_s: float = 1800.0
+    macro_window_risk_multiplier: float = 0.5  # (0,1]: risco por operação dentro de janela de alta importância
+    macro_high_policy: str = "reduce"  # reduce (padrão) | block (bloqueia NOVAS entradas dentro da janela de alta importância)
+    macro_lookahead_h: float = 168.0  # quanto do calendário futuro mostrar no painel
+    macro_yield_move_bps: float = 0.0  # 0 = desligado. >0: variação diária (2 e 10 anos) acima disso aciona cautela
+    treasury_publication_et: str = "18:00"  # replay: hora (ET) presumida para a disponibilidade do fechamento diário do Tesouro (premissa NÃO calibrada)
+
+
+@dataclass
 class Settings:
     mode: Mode = Mode.PAPER
     db_path: str = "data/bot.sqlite3"
@@ -162,6 +220,7 @@ class Settings:
     execution: ExecutionParams = field(default_factory=ExecutionParams)
     data: DataParams = field(default_factory=DataParams)
     backtest: BacktestParams = field(default_factory=BacktestParams)
+    intel: IntelParams = field(default_factory=IntelParams)
 
     # ------------------------------------------------------------------ util
     def redacted_dict(self) -> dict[str, Any]:
@@ -207,6 +266,15 @@ class Settings:
         return {p.strip() for p in self.execution.extra_allowed_programs.split(",") if p.strip()}
 
 
+def _aliases(raw: Any) -> tuple[str, ...]:
+    """Nomes alternativos do token para associar notícias (ex.: "Jupiter"). Só texto curto; usados como dado, nunca como comando."""
+    if raw in (None, []):
+        return ()
+    if not isinstance(raw, list) or len(raw) > 8 or not all(isinstance(a, str) and 2 <= len(a.strip()) <= 40 for a in raw):
+        raise ConfigError("aliases deve ser uma lista de até 8 textos (2 a 40 caracteres)")
+    return tuple(a.strip() for a in raw)
+
+
 def _token_from_dict(d: dict[str, Any]) -> TokenInfo:
     mint = d.get("mint", "")
     if not is_valid_pubkey(mint):
@@ -222,6 +290,7 @@ def _token_from_dict(d: dict[str, Any]) -> TokenInfo:
         min_liquidity_usd=d.get("min_liquidity_usd"),
         allow_mint_authority=bool(d.get("allow_mint_authority", False)),
         allow_freeze_authority=bool(d.get("allow_freeze_authority", False)),
+        aliases=_aliases(d.get("aliases", [])),
     )
 
 
@@ -328,6 +397,33 @@ def validate_settings(s: Settings) -> list[str]:
         e.append("execution_failure_rate deve estar em [0,1)")
     if not (0 < b.dev_fraction + b.val_fraction < 1):
         e.append("frações de dev+validação devem somar entre 0 e 1")
+    i = s.intel
+    if i.mode not in ("off", "shadow", "enforce"):
+        e.append("intel.mode deve ser off, shadow ou enforce")
+    if i.unavailable_policy not in ("block_entries", "warn_only"):
+        e.append("intel.unavailable_policy deve ser block_entries ou warn_only")
+    if not (0 < i.caution_risk_multiplier <= 1.0):
+        e.append("intel.caution_risk_multiplier deve estar em (0, 1] (a camada de notícias só pode reduzir risco)")
+    if min(i.refresh_interval_s, i.source_timeout_s, i.refresh_budget_s, i.stale_after_s, i.item_max_age_h, i.max_feed_bytes) <= 0:
+        e.append("intel: intervalos, timeouts e limites devem ser positivos")
+    if not (0.5 <= i.near_dup_jaccard <= 1.0) or not (0.0 <= i.min_reliability_for_block <= 1.0) or i.corroboration_min_sources < 1 or i.min_sources_ok < 1:
+        e.append("intel: limiares inválidos")
+    if i.mainnet_degraded_policy not in ("caution", "block"):
+        e.append("intel.mainnet_degraded_policy deve ser caution ou block")
+    if i.contingency_policy not in ("keep_restriction", "reduced_risk"):
+        e.append("intel.contingency_policy deve ser keep_restriction ou reduced_risk (nenhuma política libera operações sem ser escolhida explicitamente)")
+    if not (0 < i.contingency_risk_multiplier <= 1.0) or not (0 < i.macro_window_risk_multiplier <= 1.0):
+        e.append("intel: multiplicadores de risco devem estar em (0, 1] (a camada só pode reduzir risco)")
+    if i.macro_high_policy not in ("reduce", "block"):
+        e.append("intel.macro_high_policy deve ser reduce ou block")
+    if min(i.contingency_after_s, i.total_timeout_s, i.backoff_base_s, i.backoff_max_s) <= 0 or i.recovery_min_successes < 1 or i.backoff_max_s < i.backoff_base_s:
+        e.append("intel: contingência, timeouts e backoff devem ser positivos")
+    if min(i.macro_high_pre_s, i.macro_high_post_s, i.macro_medium_pre_s, i.macro_medium_post_s, i.macro_lookahead_h, i.macro_yield_move_bps) < 0:
+        e.append("intel: janelas macro não podem ser negativas")
+    if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", i.treasury_publication_et):
+        e.append("intel.treasury_publication_et deve ser HH:MM")
+    if not (0 < i.independence_uncertain_jaccard <= i.syndication_title_jaccard <= 1.0) or not (0 < i.syndication_text_jaccard <= 1.0) or i.near_dup_max_gap_h <= 0:
+        e.append("intel: limiares de independência/duplicidade inválidos")
     if not (1024 <= s.panel_port <= 65535):
         e.append("panel_port deve estar entre 1024 e 65535")
     if s.paper_capital <= 0 or b.initial_capital <= 0:

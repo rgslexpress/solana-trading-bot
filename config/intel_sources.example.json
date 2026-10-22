@@ -1,0 +1,153 @@
+{
+ "_aviso": "Catálogo de EXEMPLO. 'verified: true' = a URL e o formato foram conferidos contra uma resposta REAL (diagnóstico do usuário em 2026-10-22: Solana Status e Federal Reserve). Todas as outras fontes NÃO foram acessadas pelo autor: rode o diagnóstico de fontes antes de habilitar e confira os TERMOS DE USO. Somente https e hosts públicos. Sem scraping.",
+ "sources": [
+  {
+   "id": "solana_status",
+   "name": "Solana Status (Atlassian Statuspage)",
+   "kind": "rss",
+   "url": "https://status.solana.com/history.rss",
+   "reliability": 0.95,
+   "official": true,
+   "assets": [
+    "SOL"
+   ],
+   "domain": "solana_status",
+   "critical": true,
+   "status_format": "statuspage",
+   "enabled": true,
+   "verified": true,
+   "_nota": "Validada em 2026-10-22: HTTP 200, RSS, 25 itens (só incidentes JÁ resolvidos; o formato de um incidente ATIVO não foi observado). Fonte CRÍTICA: se cair, o painel mostra o módulo como NÃO saudável."
+  },
+  {
+   "id": "fed_monetary",
+   "name": "Federal Reserve - Política monetária (FOMC)",
+   "kind": "rss",
+   "url": "https://www.federalreserve.gov/feeds/press_monetary.xml",
+   "reliability": 0.95,
+   "official": true,
+   "domain": "macro_us",
+   "enabled": true,
+   "verified": true,
+   "_nota": "Validada em 2026-10-22: HTTP 200, RSS com BOM UTF-8, 15 itens, datas GMT."
+  },
+  {
+   "id": "fed_speeches",
+   "name": "Federal Reserve - Discursos",
+   "kind": "rss",
+   "url": "https://www.federalreserve.gov/feeds/speeches.xml",
+   "reliability": 0.95,
+   "official": true,
+   "domain": "macro_us",
+   "enabled": false,
+   "verified": true,
+   "_nota": "Validada em 2026-10-22: HTTP 200, RSS com BOM, 15 itens (títulos 'Nome, Assunto', sem a palavra 'speech': por isso default_indicator=FED_SPEECH). Discursos são impacto médio (informativo).",
+   "default_indicator": "FED_SPEECH"
+  },
+  {
+   "id": "bls_calendar",
+   "name": "BLS - Calendário de divulgações (iCalendar)",
+   "kind": "ics",
+   "url": "https://www.bls.gov/schedule/news_release/bls.ics",
+   "reliability": 0.95,
+   "official": true,
+   "domain": "macro_us",
+   "enabled": false,
+   "verified": true,
+   "min_interval_s": 21600,
+   "stale_after_s": 172800,
+   "tz": "America/New_York",
+   "_nota": "Validada em 2026-10-22: HTTP 200, text/calendar, 313 eventos, DTSTART com TZID=US-Eastern (o parser antigo ignorava todos). Reconhece Employment Situation, CPI, PPI e JOLTS (SUMMARY exato)."
+  },
+  {
+   "id": "bls_values",
+   "name": "BLS - Valores (API pública v1, sem chave)",
+   "kind": "bls_api",
+   "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/",
+   "reliability": 0.95,
+   "official": true,
+   "domain": "macro_us",
+   "enabled": false,
+   "verified": false,
+   "daily_cap": 20,
+   "min_interval_s": 1800,
+   "stale_after_s": 172800,
+   "series": [
+    "LNS14000000",
+    "CES0000000001",
+    "CUUR0000SA0",
+    "CUUR0000SA0L1E",
+    "WPSFD4",
+    "JTS000000000000000JOL"
+   ],
+   "_nota": "API v1: 1 série (LNS14000000) validada em 2026-10-22 (200, REQUEST_SUCCEEDED; 1 timeout na 1ª tentativa). As outras 5 séries NÃO foram consultadas. GET sem chave; 25 consultas/dia segundo terceiros (daily_cap=20). BLS não publica expectativa de mercado."
+  },
+  {
+   "id": "treasury_yields",
+   "name": "Tesouro dos EUA - Rendimentos diários (CSV)",
+   "kind": "treasury_csv",
+   "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_yield_curve&field_tdr_date_value=2026&page&_format=csv",
+   "reliability": 0.95,
+   "official": true,
+   "domain": "macro_us",
+   "enabled": false,
+   "verified": true,
+   "min_interval_s": 21600,
+   "stale_after_s": 259200,
+   "_nota": "Validada em 2026-10-22: HTTP 200, CSV (202 linhas, MAIS RECENTE PRIMEIRO, datas MM/DD/AAAA, colunas '2 Yr'/'10 Yr'). Atualize o ano na URL a cada janeiro. Dado de fim de dia (informativo)."
+  },
+  {
+   "id": "sec_press",
+   "name": "SEC - Comunicados à imprensa",
+   "kind": "rss",
+   "url": "https://www.sec.gov/news/pressreleases.rss",
+   "reliability": 0.9,
+   "official": true,
+   "enabled": false,
+   "verified": false,
+   "_nota": "Exige User-Agent declarado com contato (BOT_INTEL_USER_AGENT) e limite de 10 req/s. NÃO testada."
+  },
+  {
+   "id": "coindesk",
+   "name": "CoinDesk (RSS)",
+   "kind": "rss",
+   "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+   "reliability": 0.7,
+   "enabled": false,
+   "verified": false,
+   "_nota": "Termos de uso do feed NÃO confirmados. NÃO testada."
+  },
+  {
+   "id": "cointelegraph",
+   "name": "Cointelegraph (RSS)",
+   "kind": "rss",
+   "url": "https://cointelegraph.com/rss",
+   "reliability": 0.65,
+   "enabled": false,
+   "verified": false,
+   "_nota": "Há 'RSS terms of service' NÃO lidos. NÃO testada."
+  },
+  {
+   "id": "decrypt",
+   "name": "Decrypt (RSS)",
+   "kind": "rss",
+   "url": "https://decrypt.co/feed",
+   "reliability": 0.65,
+   "enabled": false,
+   "verified": false,
+   "_nota": "Termos gerais cobrem RSS, sem política específica de reuso/limite. NÃO testada."
+  },
+  {
+   "id": "gdelt_cripto",
+   "name": "GDELT DOC 2.0 (busca de notícias)",
+   "kind": "gdelt",
+   "url": "https://api.gdeltproject.org/api/v2/doc/doc",
+   "reliability": 0.4,
+   "query": "(solana OR bitcoin OR crypto) (hack OR exploit OR outage OR ETF OR SEC) sourcelang:english",
+   "timespan": "3h",
+   "min_interval_s": 600,
+   "enabled": false,
+   "verified": false,
+   "_nota": "Em 2026-10-22 respondeu HTTP 429 já na PRIMEIRA requisição e demorou 12,9 s. Não recomendada. Respeita Retry-After/backoff se habilitada."
+  }
+ ]
+}

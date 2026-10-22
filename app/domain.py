@@ -73,6 +73,7 @@ class TokenInfo:
     min_liquidity_usd: float | None = None
     allow_mint_authority: bool = False  # exceção explícita (ex.: stablecoin centralizada)
     allow_freeze_authority: bool = False
+    aliases: tuple[str, ...] = ()  # nomes alternativos para associar notícias ao token
 
     def to_raw(self, amount: float) -> int:
         """Converte quantidade humana em unidades mínimas (inteiro, arredondando para baixo)."""

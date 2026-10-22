@@ -213,3 +213,33 @@ Comando: `python scripts/run_tests_fallback.py` (runner de contingência; `pytes
 - tests/unit/test_strategy.py::test_no_lookahead_features_identical_when_future_removed
 - tests/unit/test_strategy.py::test_no_trade_during_warmup
 - tests/unit/test_strategy.py::test_sell_on_trend_loss_and_hold_otherwise
+
+
+## News & Market Intelligence (testes automatizados SIMULADOS)
+
+Comando: `python scripts/run_tests_fallback.py tests/intel` (ou `pytest tests/intel`). Resultado desta rodada (Linux, Python 3.10): **202 passaram, 0 falharam**; regressão: unit 59, integration 35, security 47, backtest 14, dashboard 31 — **todos passaram** (total 388). Nenhum teste acessa fontes reais; fontes reais foram avaliadas à parte pelo script de diagnóstico (relatório de 2026-10-22: Solana Status e Fed OK; GDELT 429; demais não testadas). A checagem do horário de verão contra o `zoneinfo` do sistema roda dentro do teste quando o banco de fusos existe.
+
+| Arquivo | Testes |
+|---|---|
+| `test_intel_audit_neutrality.py` | 5 |
+| `test_intel_classifier.py` | 8 |
+| `test_intel_classifier_v2.py` | 17 |
+| `test_intel_collector.py` | 10 |
+| `test_intel_dedup_versions.py` | 7 |
+| `test_intel_engine.py` | 13 |
+| `test_intel_fetch_timeouts.py` | 12 |
+| `test_intel_frontend.py` | 3 |
+| `test_intel_health_contingency.py` | 19 |
+| `test_intel_independence.py` | 10 |
+| `test_intel_integration.py` | 10 |
+| `test_intel_invariants.py` | 6 |
+| `test_intel_macro_engine.py` | 16 |
+| `test_intel_macro_integration.py` | 12 |
+| `test_intel_macro_time.py` | 15 |
+| `test_intel_replay.py` | 7 |
+| `test_intel_review_regressions.py` | 14 |
+| `test_intel_security.py` | 8 |
+| `test_intel_sources.py` | 10 |
+| **Total (funções de teste)** | **202** |
+
+Cobertura: ver `docs/NEWS_INTEL.md`, seção 13.

@@ -63,6 +63,7 @@ def build_runtime(
     transport_factory: Callable[[], Transport] | None = None,
     clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
     provider: CandleProvider | None = None,
+    intel_transport: Transport | None = None,
 ) -> Runtime:
     db = Database(s.db_path)
     tokens, quote = s.load_tokens()
@@ -85,7 +86,10 @@ def build_runtime(
         executor = _build_live(s, db, prov, tokens, quote, ks, cli_confirm, on_state, transport_factory, clock)
     else:
         raise ValueError("BACKTEST não usa o serviço de trading; use o comando de backtest")
-    svc = TradingService(s, db, prov, executor, ks, alerts, tokens, quote, reference, clock)
+    from app.intel.runtime import build_intel
+
+    intel = build_intel(s, db.conn, tokens, intel_transport, transport_factory)
+    svc = TradingService(s, db, prov, executor, ks, alerts, tokens, quote, reference, clock, intel=intel)
     return Runtime(s, db, svc, executor, ks, alerts, prov)
 
 

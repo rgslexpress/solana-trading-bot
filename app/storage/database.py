@@ -29,8 +29,41 @@ CREATE TABLE IF NOT EXISTS kill_switch_events (id INTEGER PRIMARY KEY, ts TEXT, 
 CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, ts TEXT, level TEXT, message TEXT);
 CREATE TABLE IF NOT EXISTS balances (id INTEGER PRIMARY KEY, ts TEXT, mint TEXT, raw_amount TEXT);
 CREATE TABLE IF NOT EXISTS bot_events (id INTEGER PRIMARY KEY, ts TEXT, event TEXT, detail TEXT, source TEXT);
+CREATE TABLE IF NOT EXISTS news_items (
+  id TEXT PRIMARY KEY, source_id TEXT, source_name TEXT, title TEXT, summary TEXT, url TEXT, published_at TEXT, collected_at TEXT,
+  first_seen TEXT, assets TEXT, category TEXT, polarity TEXT, certainty TEXT, relevance REAL, reliability REAL, impact INTEGER,
+  flags TEXT, reasons TEXT, resolution INTEGER, duplicate_of TEXT);
+CREATE INDEX IF NOT EXISTS idx_news_collected ON news_items(collected_at);
+CREATE TABLE IF NOT EXISTS news_source_status (
+  source_id TEXT PRIMARY KEY, name TEXT, last_attempt_at TEXT, last_ok_at TEXT, consecutive_failures INTEGER, last_error TEXT,
+  last_items INTEGER, last_malformed INTEGER);
+CREATE TABLE IF NOT EXISTS intel_decisions (
+  id INTEGER PRIMARY KEY, ts TEXT, symbol TEXT, mint TEXT, candle_ts TEXT, technical TEXT, mode TEXT, data_state TEXT, action TEXT,
+  would_change INTEGER, applied INTEGER, risk_scale REAL, divergence TEXT, alerts TEXT, rationale TEXT, position_id TEXT);
+CREATE TABLE IF NOT EXISTS intel_events (
+  id INTEGER PRIMARY KEY, ts TEXT, kind TEXT, source_id TEXT, severity TEXT, detail TEXT);
+CREATE TABLE IF NOT EXISTS macro_events (
+  id TEXT PRIMARY KEY, kind TEXT, name TEXT, source_id TEXT, source_url TEXT, scheduled_utc TEXT, tz_original TEXT, local_time TEXT,
+  region TEXT, importance INTEGER, indicators TEXT, confidence TEXT, status TEXT, first_seen TEXT, known_at TEXT);
+CREATE TABLE IF NOT EXISTS macro_values (
+  id INTEGER PRIMARY KEY, indicator TEXT, period TEXT, observed_at TEXT, actual REAL, forecast REAL, previous REAL, revised_previous REAL,
+  unit TEXT, source_id TEXT, is_revision INTEGER, note TEXT);
+CREATE INDEX IF NOT EXISTS idx_macro_values_ind ON macro_values(indicator, observed_at);
+CREATE TABLE IF NOT EXISTS macro_market (
+  id INTEGER PRIMARY KEY, indicator TEXT, obs_date TEXT, value REAL, prev_value REAL, change_bps REAL, observed_at TEXT, source_id TEXT);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_macro_market ON macro_market(indicator, obs_date);
 CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY, ts TEXT, kind TEXT, params_json TEXT, result_json TEXT);
 """
+
+# Colunas acrescentadas depois da primeira versão: bases já existentes são migradas de forma ADITIVA (nada é apagado/alterado).
+_ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
+    "news_items": [("event_key", "TEXT"), ("event_time", "TEXT"), ("nature", "TEXT"), ("environment", "TEXT"), ("severity", "INTEGER"),
+                   ("status_state", "TEXT"), ("origin_key", "TEXT"), ("origin_generic", "INTEGER"), ("refs", "TEXT"), ("domain", "TEXT"),
+                   ("retraction", "INTEGER"), ("indicator", "TEXT")],
+    "news_source_status": [("last_error_kind", "TEXT"), ("last_http_status", "INTEGER"), ("last_duration_ms", "INTEGER"), ("unavailable_since", "TEXT"),
+                           ("consecutive_successes", "INTEGER"), ("rate_limited_until", "TEXT"), ("backoff_level", "INTEGER"), ("day_key", "TEXT"),
+                           ("day_requests", "INTEGER")],
+}
 
 # Um único intent não-terminal por (mint, side): impede compras/vendas duplicadas por reinício/callback.
 _ACTIVE_STATES = ("CREATED", "VALIDATED", "QUOTED", "SIGNED", "SUBMITTED", "UNKNOWN")
@@ -50,10 +83,18 @@ class Database:
         self.conn.execute("PRAGMA journal_mode=WAL" if path != ":memory:" else "PRAGMA journal_mode=MEMORY")
         self.conn.execute("PRAGMA foreign_keys=ON")
         self.conn.executescript(SCHEMA)
+        self._migrate_added_columns()
         self.conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_active_intent ON intents(mint, side) "
             f"WHERE state IN ({','.join(repr(s) for s in _ACTIVE_STATES)})"
         )
+
+    def _migrate_added_columns(self) -> None:
+        for table, cols in _ADDED_COLUMNS.items():
+            have = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})")}
+            for name, typ in cols:
+                if name not in have:
+                    self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {typ}")
 
     # ---------------------------------------------------------------- util
     @contextmanager

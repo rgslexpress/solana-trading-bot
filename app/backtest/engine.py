@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import random
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -44,6 +45,7 @@ class BacktestResult:
     signal_counts: dict[str, int] = field(default_factory=dict)
     rejection_counts: dict[str, int] = field(default_factory=dict)
     kill_events: list[str] = field(default_factory=list)
+    intel_events: list[dict[str, Any]] = field(default_factory=list)  # decisões da camada de notícias (bloqueios/cautelas) no backtest
 
 
 def _condition(row: dict[str, Any]) -> str:
@@ -62,7 +64,10 @@ class BacktestEngine:
         initial_capital: float | None = None,
         start: pd.Timestamp | None = None,
         end: pd.Timestamp | None = None,
+        intel_gate: Callable[[str, datetime], Any] | None = None,
     ):
+        """`intel_gate(símbolo, instante_de_fechamento)` -> IntelAssessment usando SOMENTE informação disponível naquele instante."""
+        self.intel_gate = intel_gate
         self.s = settings
         self.data = data
         self.liq = liquidity_usd
@@ -99,6 +104,7 @@ class BacktestEngine:
         rng = random.Random(self.s.backtest.failure_seed)
         fail_rate = self.s.backtest.execution_failure_rate
         kill_events: list[str] = []
+        intel_events: list[dict[str, Any]] = []
         tf_s = pd.Timedelta(seconds=TIMEFRAME_SECONDS[sp.entry_timeframe])
 
         def marked_equity() -> float:
@@ -150,6 +156,7 @@ class BacktestEngine:
                     dec = rm.check_entry(
                         now=ts.to_pydatetime(), equity=eq_now, cash=max(cash * 0.995 - xp.network_fee_quote, 0.0), mint=d.token.mint,
                         entry_price=o, stop_price=st.stop, liquidity_usd=self.liq, positions=list(positions.values()),
+                        risk_scale=pend.get("risk_scale", 1.0),
                     )
                     if dec.trip_kill_switch:
                         halted = True
@@ -207,7 +214,17 @@ class BacktestEngine:
                 if dec.type == SignalType.SELL and sym in positions:
                     pending[sym] = dict(kind="exit", reason="sinal: " + dec.reasons[0])
                 elif dec.type == SignalType.BUY and sym not in positions and not halted and not rm.entry_block_reasons(now_dt, eq):
-                    pending[sym] = dict(kind="entry", atr=row["atr"], condition=_condition(row))
+                    scale = 1.0
+                    if self.intel_gate is not None:
+                        a = self.intel_gate(sym, now_dt)
+                        if a.block or a.risk_scale < 1.0:
+                            intel_events.append({"ts": now_dt.isoformat(), "simbolo": sym, "bloqueou": bool(a.block), "escala": a.risk_scale,
+                                                 "motivos": list(a.block_reasons or a.caution_reasons)})
+                        if a.block:
+                            rejs["notícias: bloqueio de entrada"] += 1
+                            continue
+                        scale = min(1.0, a.risk_scale)
+                    pending[sym] = dict(kind="entry", atr=row["atr"], condition=_condition(row), risk_scale=scale)
 
         # 4) encerra posições remanescentes ao último fechamento (marcação conservadora, com custos)
         if timeline:
@@ -225,4 +242,4 @@ class BacktestEngine:
                 bench = float(seg["close"].iloc[-1] / seg["open"].iloc[0] - 1) * 100
         metrics = compute_metrics(tdf, edf, self.initial, sp.entry_timeframe, bench)
         metrics["benchmark_symbol"] = ref_sym
-        return BacktestResult(tdf, edf, metrics, dict(sigs), dict(rejs), kill_events)
+        return BacktestResult(tdf, edf, metrics, dict(sigs), dict(rejs), kill_events, intel_events)

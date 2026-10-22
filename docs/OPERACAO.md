@@ -33,3 +33,9 @@ Na inicialização o robô: valida config, integridade do banco, restaura posiç
 ## Atualização de dependências
 
 `pip install -r requirements-dev.txt`, `pytest`, `ruff check .`, `mypy app`, depois execute backtest e paper antes de promover qualquer atualização. Reproduza versões com `pip freeze > requirements.lock`.
+
+## Notícias e macro (opcional)
+1. Mantenha `BOT_INTEL_MODE=off` até validar as fontes: rode o diagnóstico de fontes (somente leitura) e confira o relatório (`docs/NEWS_INTEL.md`, seção 12).
+2. Use `BOT_INTEL_MODE=shadow` por semanas e compare o que o módulo **teria** feito com o que aconteceu (`scripts/analisar_noticias_shadow.py --paper`). Só considere `enforce` depois de validação suficiente e configuração explícita.
+3. Se uma fonte crítica ficar fora do ar por mais de 6 h o painel mostra **CONTINGÊNCIA**; a restrição é mantida (nada é liberado pelo tempo). Liberar com risco reduzido exige `BOT_INTEL_CONTINGENCY_POLICY=reduced_risk` (escolha sua, explícita).
+4. Confira o calendário macro (`config/macro_calendar.json`) contra o site oficial do Fed/BLS.

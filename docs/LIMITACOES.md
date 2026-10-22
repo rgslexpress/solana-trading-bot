@@ -49,3 +49,14 @@ O ambiente em que o código foi escrito **não tinha acesso à rede** (domínio 
 - Não há API/porta de administração. A administração é pela linha de comando local.
 - Respostas de APIs/metadados de tokens **não** alteram limites de risco nem configurações.
 - Dependências externas: Jupiter (cotação/envio), RPC Solana, provedor de candles. Qualquer um pode falhar ou mentir; por isso há validação de dados, checagem de preço vs. referência e confirmação on-chain.
+
+
+## News & Market Intelligence (opcional; `off` por padrão)
+Detalhes completos em `docs/NEWS_INTEL.md`. Resumo honesto do que **não** está validado:
+
+* Testados com respostas **reais** (diagnóstico do usuário, 2026-10-22): Solana Status (RSS/JSON), Federal Reserve (política monetária e discursos), calendário do BLS e CSV do Tesouro. GDELT: HTTP 429. API de valores do BLS: OK (1 série; intermitente: 1 timeout em 2 tentativas). SEC e mídias nunca foram acessadas: parsers só com amostras sintéticas.
+* O formato de um incidente **ativo** do Solana Status não foi observado (só incidentes antigos, todos resolvidos); TTLs, janelas macro, limiares de independência e latências são **premissas não calibradas**.
+* Classificação heurística (palavras-chave/regras): erra em ironia, negações longas e manchetes ambíguas. Independência entre fontes é aproximada.
+* Macro: sem expectativa/consenso de mercado, sem S&P 500/Nasdaq/DXY, sem valores de Jobless Claims/PCE; calendário depende do cadastro do operador (datas do FOMC de terceiros, a confirmar no site do Fed).
+* **Nenhuma evidência de melhora de rentabilidade.** Backtests/replays são comparações descritivas com poucos eventos; não são prova.
+* A camada só restringe (bloqueia novas entradas ou reduz o risco). LIVE continua bloqueado e nada nela assina/envia transações.

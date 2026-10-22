@@ -1,0 +1,79 @@
+{
+ "_aviso": "Calendário macro de EXEMPLO (horários em America/New_York; a conversão para UTC usa a regra do horário de verão dos EUA). Datas do FOMC 2026 vieram de site de terceiros que diz ter conferido o calendário do Fed (NÃO confirmadas pelo autor na página oficial federalreserve.gov/monetarypolicy/fomccalendars.htm): confirme antes de confiar. Cada reunião é 'tentativa' até confirmada pelo Fed. Atas: 21 dias após o 2º dia (regra publicada), 14:00 ET. Marque 'oficial' só depois de conferir na fonte oficial. Datas de CPI/NFP/PPI/JOLTS/PCE NÃO estão aqui: use o BLS iCalendar (fonte bls_calendar) ou cadastre manualmente.",
+ "events": [
+  {
+   "kind": "FOMC_DECISION",
+   "date": "2026-10-28",
+   "time": "14:00",
+   "tz": "America/New_York",
+   "confidence": "estimado",
+   "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+  },
+  {
+   "kind": "FED_PRESSER",
+   "date": "2026-10-28",
+   "time": "14:30",
+   "tz": "America/New_York",
+   "confidence": "estimado",
+   "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+  },
+  {
+   "kind": "FOMC_MINUTES",
+   "date": "2026-11-18",
+   "time": "14:00",
+   "tz": "America/New_York",
+   "confidence": "estimado",
+   "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+  },
+  {
+   "kind": "JOBLESS_CLAIMS",
+   "date": "2026-11-25",
+   "time": "08:30",
+   "tz": "America/New_York",
+   "confidence": "estimado",
+   "source": "https://www.dol.gov/ui/data.pdf",
+   "name": "Jobless Claims (quarta-feira, véspera do Dia de Ação de Graças)"
+  },
+  {
+   "kind": "FOMC_DECISION",
+   "date": "2026-12-09",
+   "time": "14:00",
+   "tz": "America/New_York",
+   "confidence": "estimado",
+   "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+  },
+  {
+   "kind": "FED_PRESSER",
+   "date": "2026-12-09",
+   "time": "14:30",
+   "tz": "America/New_York",
+   "confidence": "estimado",
+   "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+  },
+  {
+   "kind": "FOMC_MINUTES",
+   "date": "2026-12-30",
+   "time": "14:00",
+   "tz": "America/New_York",
+   "confidence": "estimado",
+   "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+  }
+ ],
+ "recurring": [
+  {
+   "kind": "JOBLESS_CLAIMS",
+   "weekday": 3,
+   "time": "08:30",
+   "tz": "America/New_York",
+   "from": "2026-10-22",
+   "to": "2026-12-31",
+   "exclude": [
+    "2026-11-26",
+    "2026-12-24",
+    "2026-12-31"
+   ],
+   "source": "https://www.dol.gov/ui/data.pdf",
+   "_nota": "Toda quinta-feira 08:30 ET (DOL); feriados deslocam o dia: confira."
+  }
+ ]
+}

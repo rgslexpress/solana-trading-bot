@@ -225,3 +225,71 @@ def config_view(s: Settings) -> dict[str, Any]:
 def positions_for(db_path: str, status: str) -> list[Position]:
     with open_ro(db_path) as c:
         return positions(c, status)
+
+
+def intel_view(conn: sqlite3.Connection | None, s: Settings, now: datetime, limit: int = 50) -> dict[str, Any]:
+    """Seção News & Market Intelligence (SOMENTE LEITURA). Distingue "nenhum evento" de "fontes indisponíveis" e mostra a saúde de CADA fonte."""
+    from app.intel.engine import IntelEngine
+    from app.intel.macro import PENDING_MACRO_SOURCES, DbMacroView, MacroEngine, MacroStore
+    from app.intel.sources import SourceError, load_sources
+    from app.intel.store import DbNewsView, IntelStore, compute_source_states
+
+    p = s.intel
+    base: dict[str, Any] = {"modo": p.mode, "aviso": "As notícias só podem RESTRINGIR entradas (nunca compram, vendem ou alteram stops). Texto de notícia é dado, nunca instrução."}
+    if p.mode == "off":
+        return {**base, "estado_dados": "desligado", "situacao": "desligado", "mensagem": "Camada de notícias DESLIGADA (BOT_INTEL_MODE=off). Use shadow para observar sem efeito.",
+                "saude": {"geral": "desligado", "mensagem": "Camada desligada."}, "contingencia": None, "fontes": [], "alertas": [], "noticias": [], "decisoes": [], "eventos": [],
+                "macro": None}
+    try:
+        sources = load_sources(p.sources_file)
+        sources_note = None
+    except SourceError as exc:
+        sources, sources_note = [], str(exc)
+    if conn is None:
+        return {**base, "estado_dados": "unavailable", "situacao": "fontes_indisponiveis", "mensagem": "Sem base de dados ainda (inicie o paper trading).",
+                "saude": {"geral": "critico", "mensagem": "Sem base de dados."}, "contingencia": None, "fontes": [], "alertas": [], "noticias": [], "decisoes": [], "eventos": [], "macro": None}
+    store = IntelStore(conn)
+    states = compute_source_states(sources, store.status_rows(), now, p)
+    macro_engine = MacroEngine(p, DbMacroView(MacroStore(conn))) if p.macro_enabled else None
+    engine = IntelEngine(p, DbNewsView(store, sources, p), macro_engine)
+    data_state, notes, cont = engine.data_state(now)
+    health = engine.health(now)
+    alerts: dict[tuple[str, str], dict[str, Any]] = {}
+    try:
+        symbols = list(s.load_tokens()[0])
+    except Exception:  # noqa: BLE001
+        symbols = []
+    macro_pub = None
+    for sym in symbols or ["SOL"]:
+        a_ = engine.assess(sym, now, "NONE")
+        macro_pub = a_.macro
+        for a in a_.alerts:
+            key = (a.category, a.title)
+            if key not in alerts or a.blocks:
+                alerts[key] = a.to_public() | {"tokens": []}
+            alerts[key]["tokens"].append(sym)
+    if macro_pub is not None:
+        macro_pub = {**macro_pub, "pendentes": PENDING_MACRO_SOURCES}
+    if cont is not None:
+        from app.intel.models import parse_iso
+
+        since = parse_iso(cont["desde"])
+        if cont["politica"] == "reduced_risk":
+            msg_pol = "Política configurada explicitamente (reduced_risk): entradas liberadas com risco reduzido."
+        elif p.unavailable_policy == "block_entries":
+            msg_pol = "Política padrão (keep_restriction): a restrição em vigor (bloqueio de novas entradas) é MANTIDA; a passagem do tempo não libera operações."
+        else:
+            msg_pol = ("Política keep_restriction, mas unavailable_policy=warn_only (escolha do operador): NÃO há restrição em vigor; a contingência é apenas registrada "
+                       "(novas entradas NÃO estão bloqueadas).")
+        cont = {**cont, "decisoes_afetadas": store.affected_decisions(since) if since else None, "mensagem_politica": msg_pol}
+    last_ok = max((st.last_ok_at for st in states if st.last_ok_at), default=None)
+    if data_state != "ok":
+        label = {"stale": "DESATUALIZADAS", "unavailable": "INDISPONÍVEIS", "invalid": "COM RESPOSTA INVÁLIDA", "disabled": "NÃO CONFIGURADAS", "contingency": "EM CONTINGÊNCIA"}[data_state]
+        situacao, msg = "fontes_indisponiveis", f"FONTES DE NOTÍCIAS {label} — isto NÃO significa que não há eventos; os dados não são confiáveis. {health['mensagem']}"
+    elif alerts:
+        situacao, msg = "alertas", f"{len(alerts)} alerta(s) ativo(s)."
+    else:
+        situacao, msg = "nenhum_evento", "Nenhum evento relevante detectado (fontes OK e atualizadas)." + ("" if health["geral"] == "saudavel" else " Atenção: " + health["mensagem"])
+    return {**base, "estado_dados": data_state, "situacao": situacao, "mensagem": msg, "observacoes": notes + ([sources_note] if sources_note else []), "saude": health,
+            "contingencia": cont, "ultima_atualizacao": last_ok, "fontes": [st.to_public() for st in states], "alertas": sorted(alerts.values(), key=lambda a: a["impacto"]),
+            "noticias": [r.to_public() for r in store.latest(limit)], "decisoes": store.decisions(limit), "eventos": store.events(30), "macro": macro_pub}
